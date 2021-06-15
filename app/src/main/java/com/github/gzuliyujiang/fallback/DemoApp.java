@@ -18,7 +18,8 @@ import android.content.Context;
 
 import androidx.multidex.MultiDex;
 
-import com.github.gzuliyujiang.http.HttpRequest;
+import com.github.gzuliyujiang.http.HttpStrategy;
+import com.github.gzuliyujiang.logger.Logger;
 
 /**
  * @author 贵州山野羡民（1032694760@qq.com）
@@ -27,7 +28,7 @@ import com.github.gzuliyujiang.http.HttpRequest;
 public class DemoApp extends Application {
 
     static {
-        HttpRequest.enableLog();
+        Logger.enableConsolePrinter();
     }
 
     @Override
@@ -39,7 +40,7 @@ public class DemoApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        HttpRequest.initInApplication(this);
+        HttpStrategy.getDefault().setup(this);
     }
 
 }

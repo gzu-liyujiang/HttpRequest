@@ -15,7 +15,10 @@ apply from: "${rootDir}/gradle/library.gradle"
 apply from: "${rootDir}/gradle/publish.gradle"
 
 dependencies {
+    implementation androidxLibrary.annotation
     implementation androidxLibrary.lifecycle
-    compileOnly 'com.lzy.net:okgo:3.0.4'
-    compileOnly 'com.amitshekhar.android:android-networking:1.0.2'
+    implementation library.Logger
+    compileOnly library.okgo
+    compileOnly library.FastNetworking
+    implementation library.PersistentCookieJar
 }

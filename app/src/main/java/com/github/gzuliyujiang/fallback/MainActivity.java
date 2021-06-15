@@ -16,10 +16,11 @@ import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.github.gzuliyujiang.http.Callback;
-import com.github.gzuliyujiang.http.HttpRequest;
-import com.github.gzuliyujiang.http.JsonParams;
-import com.github.gzuliyujiang.http.Logger;
+import com.github.gzuliyujiang.http.HttpCallback;
+import com.github.gzuliyujiang.http.HttpOption;
+import com.github.gzuliyujiang.http.HttpStrategy;
+import com.github.gzuliyujiang.http.SimpleApi;
+import com.github.gzuliyujiang.logger.Logger;
 
 import java.util.concurrent.Executors;
 
@@ -32,18 +33,18 @@ public class MainActivity extends AppCompatActivity {
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
-                JsonParams params = new JsonParams("{'ip':'127.0.0.1'}");
-                HttpRequest.doPost("http://ip-api.com/json/?lang=zh-CN", params, new Callback() {
+                SimpleApi api = new SimpleApi("http://ip-api.com/json/?lang=zh-CN");
+                HttpStrategy.getDefault().request(HttpOption.create(api).callback(new HttpCallback() {
                     @Override
-                    public void onError(int i, Throwable th) {
-                        Logger.print(th);
+                    public void onSuccess(String result) {
+                        Logger.print(result);
                     }
 
                     @Override
-                    public void onSuccess(String str) {
-                        Logger.print(str);
+                    public void onError(int code, Throwable throwable) {
+                        Logger.print(throwable);
                     }
-                });
+                }).build());
             }
         });
     }

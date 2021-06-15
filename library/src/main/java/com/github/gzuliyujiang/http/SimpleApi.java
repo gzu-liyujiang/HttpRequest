@@ -13,26 +13,41 @@
 
 package com.github.gzuliyujiang.http;
 
-import android.util.Log;
+import androidx.annotation.NonNull;
 
 /**
  * @author 贵州山野羡民（1032694760@qq.com）
- * @since 2021/6/15 20:05
+ * @since 2021/6/15 20:46
  */
-public class Logger {
-    private static boolean enable = false;
+public class SimpleApi extends HttpApi {
+    private final String url;
 
-    public static void enable() {
-        enable = true;
+    public SimpleApi(String url) {
+        this.url = url;
     }
 
-    public static void print(Object obj) {
-        if (enable) {
-            if (obj == null) {
-                obj = "NULL";
-            }
-            Log.w("HtpRequest", obj.toString());
-        }
+    @NonNull
+    @Override
+    public String contentType() {
+        return "text/plain";
+    }
+
+    @NonNull
+    @Override
+    public String method() {
+        return HttpMethod.GET;
+    }
+
+    @NonNull
+    @Override
+    public String url() {
+        return url;
+    }
+
+    @NonNull
+    @Override
+    public String bodyToJson() {
+        return "{}";
     }
 
 }

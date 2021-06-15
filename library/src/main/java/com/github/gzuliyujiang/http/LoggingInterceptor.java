@@ -1,6 +1,12 @@
+/*
+ * Copyright (c) 2013-present, 贵州纳雍穿青人李裕江<1032694760@qq.com>, All Rights Reserved.
+ */
+
 package com.github.gzuliyujiang.http;
 
-import com.lzy.okgo.model.HttpHeaders;
+import android.text.TextUtils;
+
+import com.github.gzuliyujiang.logger.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -19,14 +25,29 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import okio.Buffer;
 
-public class LoggingInterceptor implements Interceptor {
+/**
+ * 拦截器打印日志
+ * <p>
+ * Created by liyujiang on 2018/10/17 18:07
+ *
+ * @see com.lzy.okgo.interceptor.HttpLoggingInterceptor
+ * @see com.androidnetworking.interceptors.HttpLoggingInterceptor
+ */
+final class LoggingInterceptor implements Interceptor {
+    @SuppressWarnings("CharsetObjectCanBeUsed")
     private static final Charset UTF8 = Charset.forName("UTF-8");
 
-    @Override // okhttp3.Interceptor
-    public Response intercept(Interceptor.Chain chain) throws IOException {
+    @Override
+    public Response intercept(Chain chain) throws IOException {
         Request request = chain.request();
+        //请求日志拦截
         logForRequest(request, chain.connection());
-        return logForResponse(chain.proceed(request), TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - System.nanoTime()));
+        //执行请求，计算请求时间
+        long startNs = System.nanoTime();
+        Response response = chain.proceed(request);
+        long tookMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
+        //响应日志拦截
+        return logForResponse(response, tookMs);
     }
 
     private void logForRequest(Request request, Connection connection) {
@@ -35,159 +56,136 @@ public class LoggingInterceptor implements Interceptor {
         Protocol protocol = connection != null ? connection.protocol() : Protocol.HTTP_1_1;
         StringBuilder requestMessage = new StringBuilder();
         try {
-            requestMessage.append(request.method());
-            requestMessage.append(' ');
-            requestMessage.append(request.url());
-            requestMessage.append(' ');
+            requestMessage.append(request.method()).append(' ');
+            requestMessage.append(request.url()).append(' ');
             requestMessage.append(protocol);
             if (hasRequestBody) {
+                // Request body headers are only present when installed as a network interceptor. Force
+                // them to be included (when available) so there values are known.
                 if (requestBody.contentType() != null) {
-                    requestMessage.append("\nContent-Type: ");
-                    requestMessage.append(requestBody.contentType());
+                    requestMessage.append("\nContent-Type: ").append(requestBody.contentType());
                 }
                 if (requestBody.contentLength() != -1) {
-                    requestMessage.append("\nContent-Length: ");
-                    requestMessage.append(requestBody.contentLength());
+                    requestMessage.append("\nContent-Length: ").append(requestBody.contentLength());
                 }
             }
             Headers headers = request.headers();
-            int count = headers.size();
-            for (int i = 0; i < count; i++) {
+            for (int i = 0, count = headers.size(); i < count; i++) {
                 String name = headers.name(i);
-                if (!HttpHeaders.HEAD_KEY_CONTENT_TYPE.equalsIgnoreCase(name) && !HttpHeaders.HEAD_KEY_CONTENT_LENGTH.equalsIgnoreCase(name)) {
-                    requestMessage.append("\n");
-                    requestMessage.append(name);
-                    requestMessage.append(": ");
-                    requestMessage.append(headers.value(i));
+                // Skip headers from the request body as they are explicitly logged above.
+                if (!"Content-Type".equalsIgnoreCase(name) && !"Content-Length".equalsIgnoreCase(name)) {
+                    requestMessage.append("\n").append(name).append(": ").append(headers.value(i));
                 }
             }
             requestMessage.append(" ");
             if (hasRequestBody) {
                 MediaType contentType = requestBody.contentType();
                 if (isPlaintext(contentType)) {
-                    requestMessage.append("\nBody: ");
-                    requestMessage.append(bodyToString(request));
+                    requestMessage.append("\nBody: ").append(bodyToString(request));
                 } else {
                     requestMessage.append("\nBody: ");
                     if (contentType != null) {
-                        requestMessage.append(contentType.subtype());
-                        requestMessage.append(", ");
+                        requestMessage.append(contentType.subtype()).append(", ");
                     }
                     requestMessage.append("maybe binary data, omitted!");
                 }
             }
         } catch (Exception e) {
             Logger.print(e);
-        } catch (Throwable th) {
+        } finally {
             Logger.print(requestMessage.toString());
-            throw th;
         }
-        Logger.print(requestMessage.toString());
     }
 
     private Response logForResponse(Response response, long tookMs) {
-        Response clone = response.newBuilder().build();
-        ResponseBody responseBody = clone.body();
+        Response.Builder builder = response.newBuilder();
+        Response clone = builder.build();
         StringBuilder responseMessage = new StringBuilder();
         try {
-            responseMessage.append(clone.code());
-            responseMessage.append(' ');
-            responseMessage.append(clone.message());
-            responseMessage.append(' ');
+            responseMessage.append(clone.code()).append(' ');
+            responseMessage.append(clone.message()).append(' ');
             responseMessage.append(clone.request().url());
-            responseMessage.append(" (");
-            responseMessage.append(tookMs);
-            responseMessage.append("ms）");
+            responseMessage.append(" (").append(tookMs).append("ms）");
             Headers headers = clone.headers();
-            int count = headers.size();
-            for (int i = 0; i < count; i++) {
-                responseMessage.append("\n");
-                responseMessage.append(headers.name(i));
-                responseMessage.append(": ");
-                responseMessage.append(headers.value(i));
+            for (int i = 0, count = headers.size(); i < count; i++) {
+                responseMessage.append("\n").append(headers.name(i)).append(": ").append(headers.value(i));
             }
             responseMessage.append(" ");
-            if (okhttp3.internal.http.HttpHeaders.hasBody(clone)) {
-                if (responseBody == null) {
-                    Logger.print(responseMessage.toString());
-                    return response;
-                }
-                MediaType contentType = responseBody.contentType();
-                if (contentType != null) {
-                    responseMessage.append("\nContent-Type: ");
-                    responseMessage.append(contentType.toString());
-                }
-                if (isPlaintext(contentType)) {
-                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                    InputStream inputStream = responseBody.byteStream();
-                    byte[] buffer = new byte[4096];
-                    while (true) {
-                        int len = inputStream.read(buffer);
-                        if (len != -1) {
-                            outputStream.write(buffer, 0, len);
-                        } else {
-                            outputStream.close();
-                            byte[] bytes = outputStream.toByteArray();
-                            String body = new String(bytes, getCharset(contentType));
-                            responseMessage.append("\nBody: ");
-                            responseMessage.append(body);
-                            Response build = response.newBuilder().body(ResponseBody.create(responseBody.contentType(), bytes)).build();
-                            Logger.print(responseMessage.toString());
-                            return build;
-                        }
-                    }
-                } else {
-                    responseMessage.append("\nBody: maybe [binary body], omitted!");
-                }
+            ResponseBody responseBody = clone.body();
+            if (responseBody == null) {
+                return response;
             }
-            Logger.print(responseMessage.toString());
+            MediaType contentType = responseBody.contentType();
+            if (isPlaintext(contentType)) {
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                InputStream inputStream = responseBody.byteStream();
+                int len;
+                byte[] buffer = new byte[4096];
+                while ((len = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, len);
+                }
+                outputStream.close();
+                byte[] bytes = outputStream.toByteArray();
+                String body = new String(bytes, getCharset(contentType));
+                responseMessage.append("\nBody: ").append(body);
+                responseBody = ResponseBody.create(responseBody.contentType(), bytes);
+                return response.newBuilder().body(responseBody).build();
+            } else {
+                responseMessage.append("\nBody: content type is ");
+                responseMessage.append(contentType);
+                responseMessage.append(", maybe binary body, omitted!");
+            }
         } catch (Exception e) {
             Logger.print(e);
+        } finally {
+            Logger.print(responseMessage.toString());
         }
         return response;
     }
 
     private static Charset getCharset(MediaType contentType) {
-        Charset charset = UTF8;
-        if (contentType != null) {
-            charset = contentType.charset(charset);
-        }
+        Charset charset = contentType != null ? contentType.charset(UTF8) : UTF8;
         if (charset == null) {
-            return UTF8;
+            charset = UTF8;
         }
         return charset;
     }
 
+    /**
+     * Returns true if the body in question probably contains human readable text. Uses a small sample
+     * of code points to detect unicode control characters commonly used in binary file signatures.
+     */
     private static boolean isPlaintext(MediaType mediaType) {
         if (mediaType == null) {
             return false;
         }
-        if (mediaType.type() != null && mediaType.type().equals("text")) {
+        if (TextUtils.equals(mediaType.type(), "text")) {
             return true;
         }
         String subtype = mediaType.subtype();
-        if (subtype == null) {
-            return false;
-        }
-        String subtype2 = subtype.toLowerCase();
-        if (subtype2.contains("x-www-form-urlencoded") || subtype2.contains("json") || subtype2.contains("xml") || subtype2.contains("html")) {
-            return true;
+        if (subtype != null) {
+            subtype = subtype.toLowerCase();
+            return subtype.contains("x-www-form-urlencoded") || subtype.contains("json")
+                    || subtype.contains("xml") || subtype.contains("html");
         }
         return false;
     }
 
     private String bodyToString(Request request) {
         try {
-            RequestBody body = request.newBuilder().build().body();
+            Request copy = request.newBuilder().build();
+            RequestBody body = copy.body();
             if (body == null) {
                 return "";
             }
             Buffer buffer = new Buffer();
             body.writeTo(buffer);
-            return buffer.readString(getCharset(body.contentType()));
+            Charset charset = getCharset(body.contentType());
+            return buffer.readString(charset);
         } catch (Exception e) {
             Logger.print(e);
             return "";
         }
     }
+
 }
