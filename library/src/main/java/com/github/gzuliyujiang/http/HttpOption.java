@@ -1,5 +1,14 @@
 /*
- * Copyright (c) 2013-present, 贵州纳雍穿青人李裕江<1032694760@qq.com>, All Rights Reserved.
+ * Copyright (c) 2016-present 贵州纳雍穿青人李裕江<1032694760@qq.com>
+ *
+ * The software is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 
 package com.github.gzuliyujiang.http;
@@ -9,9 +18,9 @@ import androidx.lifecycle.LifecycleOwner;
 import java.util.UUID;
 
 /**
- * 类说明
+ * HTTP请求条件
  *
- * @author 李玉江[QQ:1023694760]
+ * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2021/3/7 1:41
  */
 public class HttpOption {
@@ -20,11 +29,15 @@ public class HttpOption {
     private final HttpApi api;
     private final HttpCallback callback;
 
-    private HttpOption(Builder builder) {
+    private HttpOption(HttpOption.Builder builder) {
         this.owner = builder.owner;
         this.tag = builder.tag;
         this.api = builder.api;
         this.callback = builder.callback;
+    }
+
+    public static Builder create(String url) {
+        return create(new SimpleApi(url));
     }
 
     public static Builder create(HttpApi api) {

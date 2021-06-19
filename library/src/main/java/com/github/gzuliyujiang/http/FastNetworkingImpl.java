@@ -20,6 +20,7 @@ import android.os.Looper;
 import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
@@ -30,61 +31,103 @@ import com.androidnetworking.common.ANRequest;
 import com.androidnetworking.common.ANResponse;
 import com.androidnetworking.common.RequestBuilder;
 import com.androidnetworking.error.ANError;
-import com.androidnetworking.interfaces.StringRequestListener;
+import com.androidnetworking.interfaces.OkHttpResponseListener;
 import com.franmontiel.persistentcookiejar.ClearableCookieJar;
 import com.franmontiel.persistentcookiejar.PersistentCookieJar;
 import com.franmontiel.persistentcookiejar.cache.SetCookieCache;
 import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor;
+import com.lzy.okgo.exception.HttpException;
 
 import java.io.File;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+
+import okhttp3.Response;
 
 /**
  * 参见 https://github.com/amitshekhariitbhu/Fast-Android-Networking
- * <p>
- * Created by liyujiang on 2020/6/23 13:50
+ *
+ * @author 贵州山野羡民（1032694760@qq.com）
+ * @since 2020/6/23 13:50
  */
 final class FastNetworkingImpl implements IHttp, LifecycleEventObserver {
     private Context context;
 
     @Override
-    public void setup(Application application) {
+    public void setup(@NonNull Application application, @Nullable ILogger logger) {
         ClearableCookieJar cookieJar = new PersistentCookieJar(new SetCookieCache(), new SharedPrefsCookiePersistor(application));
-        AndroidNetworking.initialize(application, Utils.buildOkHttpClient(cookieJar));
+        AndroidNetworking.initialize(application, Utils.buildOkHttpClient(cookieJar, logger));
         this.context = application;
     }
 
     @Override
-    public void request(HttpOption option) {
+    public void request(@NonNull final HttpOption option) {
         ANRequest<?> request = buildRequest(option);
-        final HttpCallback callback = option.getCallback();
-        request.getAsString(new StringRequestListener() {
+        request.getAsOkHttpResponse(new OkHttpResponseListener() {
             @Override
-            public void onResponse(String response) {
-                if (callback != null) {
-                    callback.onSuccess(response);
+            public void onResponse(Response response) {
+                HttpCallback callback = option.getCallback();
+                if (callback == null) {
+                    return;
                 }
+                HttpResult result = new HttpResult();
+                try {
+                    result.setCode(response.code());
+                    result.setHeaders(response.headers().toMultimap());
+                    result.setBody(Objects.requireNonNull(response.body()).string());
+                } catch (Exception e) {
+                    result.setCause(e);
+                }
+                callback.onResult(result);
             }
 
             @Override
             public void onError(ANError anError) {
-                if (callback != null) {
-                    callback.onError(anError.getErrorCode(), anError);
+                HttpCallback callback = option.getCallback();
+                if (callback == null) {
+                    return;
                 }
+                HttpResult result = new HttpResult();
+                try {
+                    result.setCode(anError.getErrorCode());
+                    Response response = anError.getResponse();
+                    result.setHeaders(response.headers().toMultimap());
+                    result.setBody(Objects.requireNonNull(response.body()).string());
+                    result.setCause(anError.getCause());
+                } catch (Exception e) {
+                    result.setCause(e);
+                }
+                callback.onResult(result);
             }
         });
     }
 
+    @NonNull
     @Override
-    public String requestSync(HttpOption option) throws Exception {
-        ANRequest<?> request = buildRequest(option);
-        ANResponse<?> response = request.executeForString();
-        if (response.isSuccess()) {
-            return response.toString();
-        } else {
-            throw response.getError();
+    public HttpResult requestSync(@NonNull HttpOption option) {
+        HttpResult result = new HttpResult();
+        try {
+            ANRequest<?> request = buildRequest(option);
+            ANResponse<?> response = request.executeForOkHttpResponse();
+            Response okHttpResponse = response.getOkHttpResponse();
+            result.setHeaders(okHttpResponse.headers().toMultimap());
+            result.setCode(okHttpResponse.code());
+            if (okHttpResponse.isSuccessful()) {
+                result.setBody(Objects.requireNonNull(okHttpResponse.body()).string());
+            } else {
+                result.setCause(HttpException.COMMON("服务器响应异常：" + okHttpResponse.code()));
+            }
+        } catch (SocketTimeoutException e) {
+            result.setCause(HttpException.COMMON("服务器连接超时"));
+        } catch (ConnectException e) {
+            result.setCause(HttpException.COMMON("服务器连接失败"));
+        } catch (Exception e) {
+            result.setCause(e);
         }
+        return result;
     }
 
     private ANRequest<?> buildRequest(HttpOption option) {
@@ -146,7 +189,7 @@ final class FastNetworkingImpl implements IHttp, LifecycleEventObserver {
     }
 
     @Override
-    public void cancel(Object tag) {
+    public void cancel(@NonNull Object tag) {
         AndroidNetworking.cancel(tag);
     }
 

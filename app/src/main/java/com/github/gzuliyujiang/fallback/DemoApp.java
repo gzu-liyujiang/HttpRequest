@@ -19,13 +19,14 @@ import android.content.Context;
 import androidx.multidex.MultiDex;
 
 import com.github.gzuliyujiang.http.HttpStrategy;
+import com.github.gzuliyujiang.http.ILogger;
 import com.github.gzuliyujiang.logger.Logger;
 
 /**
  * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2021/5/15 16:01
  */
-public class DemoApp extends Application {
+public class DemoApp extends Application implements ILogger {
 
     static {
         Logger.enableConsolePrinter();
@@ -40,7 +41,12 @@ public class DemoApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        HttpStrategy.getDefault().setup(this);
+        HttpStrategy.getDefault().setup(this, this);
+    }
+
+    @Override
+    public void printLog(Object log) {
+        Logger.print(log);
     }
 
 }

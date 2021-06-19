@@ -1,12 +1,21 @@
 /*
- * Copyright (c) 2013-present, 贵州纳雍穿青人李裕江<1032694760@qq.com>, All Rights Reserved.
+ * Copyright (c) 2016-present 贵州纳雍穿青人李裕江<1032694760@qq.com>
+ *
+ * The software is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *     http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
 
 package com.github.gzuliyujiang.http;
 
 import android.text.TextUtils;
 
-import com.github.gzuliyujiang.logger.Logger;
+import androidx.annotation.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,15 +36,28 @@ import okio.Buffer;
 
 /**
  * 拦截器打印日志
- * <p>
- * Created by liyujiang on 2018/10/17 18:07
  *
+ * @author 贵州山野羡民（1032694760@qq.com）
  * @see com.lzy.okgo.interceptor.HttpLoggingInterceptor
  * @see com.androidnetworking.interceptors.HttpLoggingInterceptor
+ * @since 2018/10/17 18:07
  */
 final class LoggingInterceptor implements Interceptor {
     @SuppressWarnings("CharsetObjectCanBeUsed")
     private static final Charset UTF8 = Charset.forName("UTF-8");
+    private final ILogger logger;
+
+    public LoggingInterceptor(@Nullable ILogger logger) {
+        if (logger == null) {
+            logger = new ILogger() {
+                @Override
+                public void printLog(Object log) {
+
+                }
+            };
+        }
+        this.logger = logger;
+    }
 
     @Override
     public Response intercept(Chain chain) throws IOException {
@@ -91,9 +113,9 @@ final class LoggingInterceptor implements Interceptor {
                 }
             }
         } catch (Exception e) {
-            Logger.print(e);
+            logger.printLog(e);
         } finally {
-            Logger.print(requestMessage.toString());
+            logger.printLog(requestMessage.toString());
         }
     }
 
@@ -136,9 +158,9 @@ final class LoggingInterceptor implements Interceptor {
                 responseMessage.append(", maybe binary body, omitted!");
             }
         } catch (Exception e) {
-            Logger.print(e);
+            logger.printLog(e);
         } finally {
-            Logger.print(responseMessage.toString());
+            logger.printLog(responseMessage.toString());
         }
         return response;
     }
@@ -183,7 +205,7 @@ final class LoggingInterceptor implements Interceptor {
             Charset charset = getCharset(body.contentType());
             return buffer.readString(charset);
         } catch (Exception e) {
-            Logger.print(e);
+            logger.printLog(e);
             return "";
         }
     }

@@ -13,17 +13,12 @@
 
 package com.github.gzuliyujiang.http;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-
 /**
- * HTTP请求方法
- *
  * @author 贵州山野羡民（1032694760@qq.com）
- * @since 2021/3/7 1:47
+ * @since 2021/6/19 10:52
  */
-@Retention(RetentionPolicy.SOURCE)
-public @interface HttpMethod {
-    String GET = "GET";
-    String POST = "POST";
+public interface ILogger {
+
+    void printLog(Object log);
+
 }

@@ -15,6 +15,8 @@ package com.github.gzuliyujiang.http;
 
 import android.app.Application;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 import androidx.annotation.WorkerThread;
 
@@ -32,21 +34,23 @@ import androidx.annotation.WorkerThread;
  * https://github.com/litesuits/android-lite-http
  * https://android.googlesource.com/platform/frameworks/volley
  * https://github.com/Konloch/HTTPRequest
- * <p>
- * Created by liyujiang on 2016/12/31 15:37
- * Updated by liyujiang on 2020/5/14.
+ *
+ * @author 贵州山野羡民（1032694760@qq.com）
+ * @since 2016/12/31 15:37
+ * @since 2020/5/14
  */
 public interface IHttp {
 
-    void setup(Application application);
+    void setup(@NonNull Application application, @Nullable ILogger logger);
 
     @UiThread
-    void request(HttpOption option);
+    void request(@NonNull HttpOption option);
 
     @WorkerThread
-    String requestSync(HttpOption option) throws Exception;
+    @NonNull
+    HttpResult requestSync(@NonNull HttpOption option);
 
-    void cancel(Object tag);
+    void cancel(@NonNull Object tag);
 
     void cancelAll();
 

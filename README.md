@@ -1,4 +1,4 @@
-# Logger
+# HttpRequest
 
 ![Release APK](https://github.com/gzu-liyujiang/HttpRequest/workflows/Release%20APK/badge.svg)
 [![jitpack](https://jitpack.io/v/gzu-liyujiang/HttpRequest.svg)](https://jitpack.io/#gzu-liyujiang/HttpRequest)

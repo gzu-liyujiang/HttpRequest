@@ -16,6 +16,7 @@ package com.github.gzuliyujiang.http;
 import android.app.Application;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 import androidx.annotation.WorkerThread;
 import androidx.lifecycle.Lifecycle;
@@ -23,7 +24,8 @@ import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
 
 /**
- * Created by liyujiang on 2020/6/23.
+ * @author 贵州山野羡民（1032694760@qq.com）
+ * @since 2020/6/23
  */
 public class HttpStrategy implements IHttp, LifecycleEventObserver {
     private static final String MESSAGE = "Please add dependency `runtimeOnly 'com.lzy.net:okgo:xxx'`" +
@@ -56,24 +58,25 @@ public class HttpStrategy implements IHttp, LifecycleEventObserver {
     }
 
     @Override
-    public void setup(Application application) {
-        getDefault().setup(application);
+    public void setup(@NonNull Application application, @Nullable ILogger logger) {
+        getDefault().setup(application, logger);
     }
 
     @UiThread
     @Override
-    public void request(HttpOption option) {
+    public void request(@NonNull HttpOption option) {
         getDefault().request(option);
     }
 
     @WorkerThread
+    @NonNull
     @Override
-    public String requestSync(HttpOption option) throws Exception {
+    public HttpResult requestSync(@NonNull HttpOption option) {
         return getDefault().requestSync(option);
     }
 
     @Override
-    public void cancel(Object tag) {
+    public void cancel(@NonNull Object tag) {
         getDefault().cancel(tag);
     }
 

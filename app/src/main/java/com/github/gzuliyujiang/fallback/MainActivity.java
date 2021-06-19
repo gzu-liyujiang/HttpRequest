@@ -14,15 +14,14 @@ package com.github.gzuliyujiang.fallback;
 
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.github.gzuliyujiang.http.HttpCallback;
 import com.github.gzuliyujiang.http.HttpOption;
+import com.github.gzuliyujiang.http.HttpResult;
 import com.github.gzuliyujiang.http.HttpStrategy;
-import com.github.gzuliyujiang.http.SimpleApi;
 import com.github.gzuliyujiang.logger.Logger;
-
-import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -30,23 +29,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Executors.newSingleThreadExecutor().execute(new Runnable() {
+        HttpStrategy.getDefault().request(HttpOption.create("http://ip-api.com/json/?lang=zh-CN").callback(new HttpCallback() {
             @Override
-            public void run() {
-                SimpleApi api = new SimpleApi("http://ip-api.com/json/?lang=zh-CN");
-                HttpStrategy.getDefault().request(HttpOption.create(api).callback(new HttpCallback() {
-                    @Override
-                    public void onSuccess(String result) {
-                        Logger.print(result);
-                    }
-
-                    @Override
-                    public void onError(int code, Throwable throwable) {
-                        Logger.print(throwable);
-                    }
-                }).build());
+            public void onResult(@NonNull HttpResult result) {
+                Logger.print(result);
             }
-        });
+        }).build());
     }
 
 }

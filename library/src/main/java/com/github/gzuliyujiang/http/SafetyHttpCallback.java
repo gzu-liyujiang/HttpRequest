@@ -24,7 +24,9 @@ import com.github.gzuliyujiang.logger.Logger;
 
 /**
  * 绑定{@link FragmentActivity}及{@link Fragment}生命周期，防止界面销毁后异常
- * Created by liyujiang on 2020/7/14.
+ *
+ * @author 贵州山野羡民（1032694760@qq.com）
+ * @since 2020/7/14
  */
 public abstract class SafetyHttpCallback extends HttpCallback implements LifecycleEventObserver {
     private Lifecycle.Event lifecycleEvent;
@@ -42,25 +44,25 @@ public abstract class SafetyHttpCallback extends HttpCallback implements Lifecyc
     public abstract void onErrorSafety(int code, Throwable throwable);
 
     @Override
-    public final void onSuccess(String result) {
+    public void onResult(@NonNull HttpResult result) {
         if (lifecycleEvent == Lifecycle.Event.ON_DESTROY) {
             return;
         }
-        try {
-            onSuccessSafety(result);
-        } catch (Exception e) {
-            Logger.print(e);
-            onError(-1, e);
-        }
-    }
-
-    @Override
-    public final void onError(int code, Throwable throwable) {
-        if (lifecycleEvent == Lifecycle.Event.ON_DESTROY) {
+        if (result.isSuccessful()) {
+            try {
+                onSuccessSafety(result.getBody());
+            } catch (Exception e) {
+                Logger.print(e);
+                try {
+                    onErrorSafety(-1, e);
+                } catch (Exception e2) {
+                    Logger.print(e2);
+                }
+            }
             return;
         }
         try {
-            onErrorSafety(code, throwable);
+            onErrorSafety(result.getCode(), result.getCause());
         } catch (Exception e) {
             Logger.print(e);
         }
