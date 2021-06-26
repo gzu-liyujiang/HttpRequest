@@ -17,8 +17,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.LifecycleOwner;
 
-import org.json.JSONObject;
-
 import java.io.File;
 import java.io.Serializable;
 import java.util.List;
@@ -31,7 +29,7 @@ import java.util.Map;
  * @since 2021/3/22 10:09
  */
 @SuppressWarnings("unused")
-public abstract class HttpApi implements Serializable {
+public abstract class RequestApi implements Serializable {
     private LifecycleOwner lifecycleOwner;
     private Object requestTag;
 
@@ -57,32 +55,67 @@ public abstract class HttpApi implements Serializable {
     }
 
     @NonNull
+    @ContentType
     public abstract String contentType();
 
     @NonNull
-    @HttpMethod
-    public abstract String method();
+    @MethodType
+    public abstract String methodType();
 
     @NonNull
     public abstract String url();
 
     @Nullable
-    public Map<String, String> headers() {
-        return null;
-    }
+    public abstract Map<String, String> headers();
 
+    /**
+     * @see MethodType#POST
+     * @see ContentType#MULTIPART
+     */
     @Nullable
-    public List<File> files() {
+    public abstract List<File> files();
+
+    /**
+     * @see MethodType#GET
+     */
+    @Nullable
+    public abstract Map<String, String> queryParameters();
+
+    /**
+     * @see MethodType#POST
+     * @see ContentType#FORM
+     * @see ContentType#MULTIPART
+     */
+    @Nullable
+    public abstract Map<String, String> bodyParameters();
+
+    /**
+     * 注意：使用该方法提交数据会清空实体中其他所有的参数(头信息不清除)
+     *
+     * @see MethodType#POST
+     * @see ContentType#JSON
+     * @see ContentType#TEXT
+     */
+    @Nullable
+    public String bodyToString() {
         return null;
     }
 
-    @NonNull
-    public abstract Map<String, String> bodyToMap();
+    /**
+     * 注意：使用该方法提交数据会清空实体中其他所有的参数(头信息不清除)
+     *
+     * @see MethodType#POST
+     * @see ContentType#STREAM
+     */
+    @Nullable
+    public byte[] bodyToBytes() {
+        return null;
+    }
 
     @NonNull
     @Override
     public String toString() {
-        return new JSONObject(bodyToMap()).toString();
+        return "url=" + url() + ", contentType=" + contentType() + ", methodType=" + methodType();
     }
 
 }

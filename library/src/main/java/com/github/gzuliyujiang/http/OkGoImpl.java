@@ -32,11 +32,9 @@ import com.lzy.okgo.cookie.CookieJarImpl;
 import com.lzy.okgo.cookie.store.SPCookieStore;
 import com.lzy.okgo.exception.HttpException;
 import com.lzy.okgo.model.Response;
-import com.lzy.okgo.request.base.BodyRequest;
+import com.lzy.okgo.request.PostRequest;
 import com.lzy.okgo.request.base.Request;
 import com.lzy.okgo.utils.OkLogger;
-
-import org.json.JSONObject;
 
 import java.io.File;
 import java.net.ConnectException;
@@ -51,7 +49,7 @@ import java.util.Objects;
  * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2018/9/14 13:03
  */
-final class OkGoImpl implements IHttp, LifecycleEventObserver {
+final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
     private Context context;
 
     @Override
@@ -67,7 +65,7 @@ final class OkGoImpl implements IHttp, LifecycleEventObserver {
     }
 
     @Override
-    public void request(@NonNull HttpApi api, final @Nullable HttpCallback callback) {
+    public void request(@NonNull RequestApi api, final @Nullable Callback callback) {
         Request<String, ?> request = buildRequest(api);
         request.execute(new StringCallback() {
             @Override
@@ -75,7 +73,7 @@ final class OkGoImpl implements IHttp, LifecycleEventObserver {
                 if (callback == null) {
                     return;
                 }
-                HttpResult result = new HttpResult();
+                ResponseResult result = new ResponseResult();
                 try {
                     result.setCode(response.code());
                     result.setBody(response.body());
@@ -96,8 +94,8 @@ final class OkGoImpl implements IHttp, LifecycleEventObserver {
 
     @NonNull
     @Override
-    public HttpResult requestSync(@NonNull HttpApi api) {
-        HttpResult result = new HttpResult();
+    public ResponseResult requestSync(@NonNull RequestApi api) {
+        ResponseResult result = new ResponseResult();
         Request<String, ?> request = buildRequest(api);
         try {
             okhttp3.Response okHttpResponse = request.execute();
@@ -118,7 +116,7 @@ final class OkGoImpl implements IHttp, LifecycleEventObserver {
         return result;
     }
 
-    private Request<String, ?> buildRequest(@NonNull HttpApi api) {
+    private Request<String, ?> buildRequest(@NonNull RequestApi api) {
         final LifecycleOwner lifecycleOwner = api.getLifecycleOwner();
         if (lifecycleOwner != null) {
             new Handler(Looper.getMainLooper()).post(new Runnable() {
@@ -128,24 +126,33 @@ final class OkGoImpl implements IHttp, LifecycleEventObserver {
             });
         }
         Request<String, ?> request;
-        if (HttpMethod.GET.equals(api.method())) {
+        if (MethodType.GET.equals(api.methodType())) {
             request = OkGo.get(api.url());
         } else {
-            BodyRequest<String, ?> bodyRequest = OkGo.post(api.url());
+            PostRequest<String> postRequest = OkGo.post(api.url());
             List<File> files = api.files();
             int size = files == null ? 0 : files.size();
             if (size > 0) {
                 if (size == 1) {
-                    bodyRequest.params("file", files.get(0));
+                    postRequest.params("file", files.get(0));
                 } else {
-                    bodyRequest.addFileParams("file", files);
+                    postRequest.addFileParams("file", files);
                 }
             }
-            if (api.contentType().toLowerCase().contains("json")) {
-                // 注意使用该方法上传数据会清空实体中其他所有的参数(头信息不清除)
-                bodyRequest.upJson(new JSONObject(api.bodyToMap()).toString());
+            postRequest.params(api.bodyParameters());
+            String bodyToString = api.bodyToString();
+            if (bodyToString != null) {
+                if (ContentType.JSON.equals(api.contentType())) {
+                    postRequest.upJson(bodyToString);
+                } else {
+                    postRequest.upString(bodyToString);
+                }
             }
-            request = bodyRequest;
+            byte[] bodyToBytes = api.bodyToBytes();
+            if (bodyToBytes != null) {
+                postRequest.upBytes(bodyToBytes);
+            }
+            request = postRequest;
         }
         request.tag(api.getRequestTag());
         Map<String, String> headers = api.headers();
@@ -154,9 +161,9 @@ final class OkGoImpl implements IHttp, LifecycleEventObserver {
                 request.headers(entry.getKey(), entry.getValue());
             }
         }
-        Map<String, String> body = api.bodyToMap();
-        if (body.size() > 0) {
-            for (Map.Entry<String, String> entry : body.entrySet()) {
+        Map<String, String> queryParameters = api.queryParameters();
+        if (queryParameters != null && queryParameters.size() > 0) {
+            for (Map.Entry<String, String> entry : queryParameters.entrySet()) {
                 request.params(entry.getKey(), entry.getValue());
             }
         }

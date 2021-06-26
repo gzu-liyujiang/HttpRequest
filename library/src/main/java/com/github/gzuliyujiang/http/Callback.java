@@ -21,8 +21,8 @@ import androidx.annotation.NonNull;
  * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2020/7/14
  */
-public abstract class HttpCallback {
+public abstract class Callback {
 
-    public abstract void onResult(@NonNull HttpResult result);
+    public abstract void onResult(@NonNull ResponseResult result);
 
 }

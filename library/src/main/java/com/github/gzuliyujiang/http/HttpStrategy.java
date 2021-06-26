@@ -28,11 +28,11 @@ import androidx.lifecycle.LifecycleOwner;
  * @since 2020/6/23
  */
 @SuppressWarnings("unused")
-public class HttpStrategy implements IHttp, LifecycleEventObserver {
+public class HttpStrategy implements IHttpClient, LifecycleEventObserver {
     private static final String MESSAGE = "Please add dependency `runtimeOnly 'com.lzy.net:okgo:xxx'`" +
             " or `runtimeOnly 'com.amitshekhar.android:android-networking:xxx'` in your app/build.gradle";
     private static final HttpStrategy INSTANCE = new HttpStrategy();
-    private IHttp strategy;
+    private IHttpClient strategy;
     private ILogger logger;
 
     private HttpStrategy() {
@@ -65,14 +65,14 @@ public class HttpStrategy implements IHttp, LifecycleEventObserver {
         INSTANCE.logger = logger;
     }
 
-    public static IHttp getDefault() {
+    public static IHttpClient getDefault() {
         if (INSTANCE.strategy == null) {
             throw new RuntimeException(MESSAGE);
         }
         return INSTANCE.strategy;
     }
 
-    public static void setStrategy(IHttp strategy) {
+    public static void setStrategy(IHttpClient strategy) {
         INSTANCE.strategy = strategy;
     }
 
@@ -83,14 +83,14 @@ public class HttpStrategy implements IHttp, LifecycleEventObserver {
 
     @UiThread
     @Override
-    public void request(@NonNull HttpApi api, @Nullable HttpCallback callback) {
+    public void request(@NonNull RequestApi api, @Nullable Callback callback) {
         getDefault().request(api, callback);
     }
 
     @WorkerThread
     @NonNull
     @Override
-    public HttpResult requestSync(@NonNull HttpApi api) {
+    public ResponseResult requestSync(@NonNull RequestApi api) {
         return getDefault().requestSync(api);
     }
 

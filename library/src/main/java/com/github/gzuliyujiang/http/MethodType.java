@@ -24,7 +24,7 @@ import java.lang.annotation.RetentionPolicy;
  */
 @SuppressWarnings("unused")
 @Retention(RetentionPolicy.SOURCE)
-public @interface HttpMethod {
+public @interface MethodType {
     String GET = "GET";
     String POST = "POST";
 }

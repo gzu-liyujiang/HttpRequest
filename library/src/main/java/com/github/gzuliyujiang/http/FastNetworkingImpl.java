@@ -38,8 +38,6 @@ import com.franmontiel.persistentcookiejar.cache.SetCookieCache;
 import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor;
 import com.lzy.okgo.exception.HttpException;
 
-import org.json.JSONObject;
-
 import java.io.File;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
@@ -55,7 +53,7 @@ import okhttp3.Response;
  * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2020/6/23 13:50
  */
-final class FastNetworkingImpl implements IHttp, LifecycleEventObserver {
+final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
     private Context context;
 
     @Override
@@ -66,7 +64,7 @@ final class FastNetworkingImpl implements IHttp, LifecycleEventObserver {
     }
 
     @Override
-    public void request(@NonNull HttpApi api, final @Nullable HttpCallback callback) {
+    public void request(@NonNull RequestApi api, final @Nullable Callback callback) {
         ANRequest<?> request = buildRequest(api);
         request.getAsOkHttpResponse(new OkHttpResponseListener() {
             @Override
@@ -74,7 +72,7 @@ final class FastNetworkingImpl implements IHttp, LifecycleEventObserver {
                 if (callback == null) {
                     return;
                 }
-                HttpResult result = new HttpResult();
+                ResponseResult result = new ResponseResult();
                 try {
                     result.setCode(response.code());
                     result.setHeaders(response.headers().toMultimap());
@@ -90,7 +88,7 @@ final class FastNetworkingImpl implements IHttp, LifecycleEventObserver {
                 if (callback == null) {
                     return;
                 }
-                HttpResult result = new HttpResult();
+                ResponseResult result = new ResponseResult();
                 try {
                     result.setCode(anError.getErrorCode());
                     Response response = anError.getResponse();
@@ -107,8 +105,8 @@ final class FastNetworkingImpl implements IHttp, LifecycleEventObserver {
 
     @NonNull
     @Override
-    public HttpResult requestSync(@NonNull HttpApi api) {
-        HttpResult result = new HttpResult();
+    public ResponseResult requestSync(@NonNull RequestApi api) {
+        ResponseResult result = new ResponseResult();
         try {
             ANRequest<?> request = buildRequest(api);
             ANResponse<?> response = request.executeForOkHttpResponse();
@@ -130,7 +128,7 @@ final class FastNetworkingImpl implements IHttp, LifecycleEventObserver {
         return result;
     }
 
-    private ANRequest<?> buildRequest(@NonNull HttpApi api) {
+    private ANRequest<?> buildRequest(@NonNull RequestApi api) {
         final LifecycleOwner lifecycleOwner = api.getLifecycleOwner();
         if (lifecycleOwner != null) {
             new Handler(Looper.getMainLooper()).post(new Runnable() {
@@ -140,29 +138,44 @@ final class FastNetworkingImpl implements IHttp, LifecycleEventObserver {
             });
         }
         ANRequest<?> request;
-        List<File> files = api.files();
-        if (files != null && files.size() > 0) {
-            ANRequest.MultiPartBuilder<?> builder = AndroidNetworking.upload(api.url());
-            builder.setTag(api.getRequestTag());
-            builder.addMultipartFileList("file", files);
-            setHeaderAndBody(builder, api);
-            request = builder.build();
-        } else if (HttpMethod.GET.equals(api.method())) {
-            ANRequest.GetRequestBuilder<?> builder = AndroidNetworking.get(api.url());
-            builder.setTag(api.getRequestTag());
-            setHeaderAndBody(builder, api);
-            request = builder.build();
+        if (MethodType.GET.equals(api.methodType())) {
+            ANRequest.GetRequestBuilder<?> getRequestBuilder = AndroidNetworking.get(api.url());
+            getRequestBuilder.setTag(api.getRequestTag());
+            setHeaderAndQueryParameters(getRequestBuilder, api);
+            request = getRequestBuilder.build();
         } else {
-            ANRequest.PostRequestBuilder<?> builder = AndroidNetworking.post(api.url());
-            builder.setTag(api.getRequestTag());
-            setHeaderAndBody(builder, api);
-            if (api.contentType().toLowerCase().contains("json")) {
-                // 注意使用该方法上传数据会清空实体中其他所有的参数(头信息不清除)
-                builder.setContentType("application/json");
-                builder.addStringBody(new JSONObject(api.bodyToMap()).toString());
+            Map<String, String> bodyParameters = api.bodyParameters();
+            List<File> files = api.files();
+            int size = files == null ? 0 : files.size();
+            if (size > 0) {
+                ANRequest.MultiPartBuilder<?> multiPartBuilder = AndroidNetworking.upload(api.url());
+                multiPartBuilder.setTag(api.getRequestTag());
+                if (size == 1) {
+                    multiPartBuilder.addMultipartFile("file", files.get(0));
+                } else {
+                    multiPartBuilder.addMultipartFileList("file", files);
+                }
+                setHeaderAndQueryParameters(multiPartBuilder, api);
+                multiPartBuilder.addMultipartParameter(bodyParameters);
+                request = multiPartBuilder.build();
+            } else {
+                ANRequest.PostRequestBuilder<?> postRequestBuilder = AndroidNetworking.post(api.url());
+                postRequestBuilder.setTag(api.getRequestTag());
+                setHeaderAndQueryParameters(postRequestBuilder, api);
+                postRequestBuilder.addBodyParameter(bodyParameters);
+                postRequestBuilder.setContentType(api.contentType());
+                String bodyToString = api.bodyToString();
+                if (bodyToString != null) {
+                    postRequestBuilder.addStringBody(bodyToString);
+                }
+                byte[] bodyToBytes = api.bodyToBytes();
+                if (bodyToBytes != null) {
+                    postRequestBuilder.addByteBody(bodyToBytes);
+                }
+                request = postRequestBuilder.build();
             }
-            request = builder.build();
         }
+
         String ua = Utils.getDefaultUserAgent(context, "FastNetworking/" + BuildConfig.VERSION_NAME);
         String userAgentPart = api.userAgentPart();
         if (!TextUtils.isEmpty(userAgentPart)) {
@@ -172,16 +185,16 @@ final class FastNetworkingImpl implements IHttp, LifecycleEventObserver {
         return request;
     }
 
-    private void setHeaderAndBody(RequestBuilder builder, HttpApi api) {
+    private void setHeaderAndQueryParameters(RequestBuilder builder, RequestApi api) {
         Map<String, String> headers = api.headers();
         if (headers != null && headers.size() > 0) {
             for (Map.Entry<String, String> entry : headers.entrySet()) {
                 builder.addHeaders(entry.getKey(), entry.getValue());
             }
         }
-        Map<String, String> map = api.bodyToMap();
-        if (map.size() > 0) {
-            for (Map.Entry<String, String> entry : map.entrySet()) {
+        Map<String, String> queryParameters = api.queryParameters();
+        if (queryParameters != null && queryParameters.size() > 0) {
+            for (Map.Entry<String, String> entry : queryParameters.entrySet()) {
                 builder.addQueryParameter(entry.getKey(), entry.getValue());
             }
         }

@@ -39,16 +39,16 @@ import androidx.annotation.WorkerThread;
  * @since 2016/12/31 15:37
  * @since 2020/5/14
  */
-public interface IHttp {
+public interface IHttpClient {
 
     void setup(@NonNull Application application);
 
     @UiThread
-    void request(@NonNull HttpApi api, @Nullable HttpCallback callback);
+    void request(@NonNull RequestApi api, @Nullable Callback callback);
 
     @WorkerThread
     @NonNull
-    HttpResult requestSync(@NonNull HttpApi api);
+    ResponseResult requestSync(@NonNull RequestApi api);
 
     void cancel(@NonNull Object tag);
 

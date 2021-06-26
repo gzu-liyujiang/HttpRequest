@@ -27,14 +27,14 @@ import androidx.lifecycle.LifecycleOwner;
  * @since 2020/7/14
  */
 @SuppressWarnings("unused")
-public abstract class SafetyHttpCallback extends HttpCallback implements LifecycleEventObserver {
+public abstract class SafetyCallback extends Callback implements LifecycleEventObserver {
     private Lifecycle.Event lifecycleEvent;
 
-    public SafetyHttpCallback(FragmentActivity activity) {
+    public SafetyCallback(FragmentActivity activity) {
         activity.getLifecycle().addObserver(this);
     }
 
-    public SafetyHttpCallback(Fragment fragment) {
+    public SafetyCallback(Fragment fragment) {
         fragment.getLifecycle().addObserver(this);
     }
 
@@ -43,7 +43,7 @@ public abstract class SafetyHttpCallback extends HttpCallback implements Lifecyc
     public abstract void onErrorSafety(int code, Throwable throwable);
 
     @Override
-    public void onResult(@NonNull HttpResult result) {
+    public void onResult(@NonNull ResponseResult result) {
         if (lifecycleEvent == Lifecycle.Event.ON_DESTROY) {
             return;
         }

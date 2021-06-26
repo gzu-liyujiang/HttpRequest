@@ -17,9 +17,9 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.github.gzuliyujiang.http.HttpCallback;
-import com.github.gzuliyujiang.http.HttpResult;
+import com.github.gzuliyujiang.http.Callback;
 import com.github.gzuliyujiang.http.HttpStrategy;
+import com.github.gzuliyujiang.http.ResponseResult;
 import com.github.gzuliyujiang.http.SimpleApi;
 import com.github.gzuliyujiang.logger.Logger;
 
@@ -29,9 +29,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        HttpStrategy.getDefault().request(new SimpleApi("http://ip-api.com/json/?lang=zh-CN"), new HttpCallback() {
+        HttpStrategy.getDefault().request(new SimpleApi("http://ip-api.com/json/?lang=zh-CN"), new Callback() {
             @Override
-            public void onResult(@NonNull HttpResult result) {
+            public void onResult(@NonNull ResponseResult result) {
                 Logger.print(result);
             }
         });
