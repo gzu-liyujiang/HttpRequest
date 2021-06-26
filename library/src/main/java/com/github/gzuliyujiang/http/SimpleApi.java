@@ -14,6 +14,9 @@
 package com.github.gzuliyujiang.http;
 
 import androidx.annotation.NonNull;
+import androidx.collection.ArrayMap;
+
+import java.util.Map;
 
 /**
  * @author 贵州山野羡民（1032694760@qq.com）
@@ -46,8 +49,8 @@ public class SimpleApi extends HttpApi {
 
     @NonNull
     @Override
-    public String bodyToJson() {
-        return "{}";
+    public Map<String, String> bodyToMap() {
+        return new ArrayMap<>();
     }
 
 }

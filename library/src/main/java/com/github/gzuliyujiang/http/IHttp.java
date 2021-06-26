@@ -41,14 +41,14 @@ import androidx.annotation.WorkerThread;
  */
 public interface IHttp {
 
-    void setup(@NonNull Application application, @Nullable ILogger logger);
+    void setup(@NonNull Application application);
 
     @UiThread
-    void request(@NonNull HttpOption option);
+    void request(@NonNull HttpApi api, @Nullable HttpCallback callback);
 
     @WorkerThread
     @NonNull
-    HttpResult requestSync(@NonNull HttpOption option);
+    HttpResult requestSync(@NonNull HttpApi api);
 
     void cancel(@NonNull Object tag);
 

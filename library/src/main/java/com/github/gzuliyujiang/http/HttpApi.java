@@ -15,16 +15,12 @@ package com.github.gzuliyujiang.http;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.collection.ArrayMap;
+import androidx.lifecycle.LifecycleOwner;
 
-import com.github.gzuliyujiang.logger.Logger;
-
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.Serializable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -34,7 +30,26 @@ import java.util.Map;
  * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2021/3/22 10:09
  */
+@SuppressWarnings("unused")
 public abstract class HttpApi implements Serializable {
+    private LifecycleOwner lifecycleOwner;
+    private Object requestTag;
+
+    public LifecycleOwner getLifecycleOwner() {
+        return lifecycleOwner;
+    }
+
+    public void setLifecycleOwner(LifecycleOwner lifecycleOwner) {
+        this.lifecycleOwner = lifecycleOwner;
+    }
+
+    public Object getRequestTag() {
+        return requestTag;
+    }
+
+    public void setRequestTag(Object requestTag) {
+        this.requestTag = requestTag;
+    }
 
     @Nullable
     public String userAgentPart() {
@@ -62,28 +77,12 @@ public abstract class HttpApi implements Serializable {
     }
 
     @NonNull
-    public abstract String bodyToJson();
-
-    @NonNull
-    public Map<String, String> bodyToMap() {
-        Map<String, String> map = new ArrayMap<>();
-        try {
-            JSONObject jsonObject = new JSONObject(bodyToJson());
-            Iterator<String> iterator = jsonObject.keys();
-            while (iterator.hasNext()) {
-                String key = iterator.next();
-                map.put(key, jsonObject.optString(key));
-            }
-        } catch (JSONException e) {
-            Logger.print(e);
-        }
-        return map;
-    }
+    public abstract Map<String, String> bodyToMap();
 
     @NonNull
     @Override
     public String toString() {
-        return bodyToJson();
+        return new JSONObject(bodyToMap()).toString();
     }
 
 }

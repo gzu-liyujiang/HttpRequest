@@ -36,6 +36,8 @@ import com.lzy.okgo.request.base.BodyRequest;
 import com.lzy.okgo.request.base.Request;
 import com.lzy.okgo.utils.OkLogger;
 
+import org.json.JSONObject;
+
 import java.io.File;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
@@ -53,24 +55,23 @@ final class OkGoImpl implements IHttp, LifecycleEventObserver {
     private Context context;
 
     @Override
-    public void setup(@NonNull Application application, @Nullable ILogger logger) {
+    public void setup(@NonNull Application application) {
         context = application;
         OkLogger.debug(false);
         // See https://github.com/jeasonlzy/okhttp-OkGo/wiki/Init#%E5%85%A8%E5%B1%80%E9%85%8D%E7%BD%AE
         OkGo okGo = OkGo.getInstance();
         okGo.init(application);
-        okGo.setOkHttpClient(Utils.buildOkHttpClient(new CookieJarImpl(new SPCookieStore(application)), logger));
+        okGo.setOkHttpClient(Utils.buildOkHttpClient(new CookieJarImpl(new SPCookieStore(application))));
         okGo.setRetryCount(1);
         okGo.setCacheMode(CacheMode.DEFAULT);
     }
 
     @Override
-    public void request(@NonNull final HttpOption option) {
-        Request<String, ?> request = buildRequest(option);
+    public void request(@NonNull HttpApi api, final @Nullable HttpCallback callback) {
+        Request<String, ?> request = buildRequest(api);
         request.execute(new StringCallback() {
             @Override
             public void onSuccess(Response<String> response) {
-                HttpCallback callback = option.getCallback();
                 if (callback == null) {
                     return;
                 }
@@ -95,9 +96,9 @@ final class OkGoImpl implements IHttp, LifecycleEventObserver {
 
     @NonNull
     @Override
-    public HttpResult requestSync(@NonNull HttpOption option) {
+    public HttpResult requestSync(@NonNull HttpApi api) {
         HttpResult result = new HttpResult();
-        Request<String, ?> request = buildRequest(option);
+        Request<String, ?> request = buildRequest(api);
         try {
             okhttp3.Response okHttpResponse = request.execute();
             result.setHeaders(okHttpResponse.headers().toMultimap());
@@ -117,8 +118,8 @@ final class OkGoImpl implements IHttp, LifecycleEventObserver {
         return result;
     }
 
-    private Request<String, ?> buildRequest(HttpOption option) {
-        final LifecycleOwner lifecycleOwner = option.getOwner();
+    private Request<String, ?> buildRequest(@NonNull HttpApi api) {
+        final LifecycleOwner lifecycleOwner = api.getLifecycleOwner();
         if (lifecycleOwner != null) {
             new Handler(Looper.getMainLooper()).post(new Runnable() {
                 public void run() {
@@ -126,7 +127,6 @@ final class OkGoImpl implements IHttp, LifecycleEventObserver {
                 }
             });
         }
-        HttpApi api = option.getApi();
         Request<String, ?> request;
         if (HttpMethod.GET.equals(api.method())) {
             request = OkGo.get(api.url());
@@ -143,11 +143,11 @@ final class OkGoImpl implements IHttp, LifecycleEventObserver {
             }
             if (api.contentType().toLowerCase().contains("json")) {
                 // 注意使用该方法上传数据会清空实体中其他所有的参数(头信息不清除)
-                bodyRequest.upJson(api.bodyToJson());
+                bodyRequest.upJson(new JSONObject(api.bodyToMap()).toString());
             }
             request = bodyRequest;
         }
-        request.tag(option.getTag());
+        request.tag(api.getRequestTag());
         Map<String, String> headers = api.headers();
         if (headers != null && headers.size() > 0) {
             for (Map.Entry<String, String> entry : headers.entrySet()) {

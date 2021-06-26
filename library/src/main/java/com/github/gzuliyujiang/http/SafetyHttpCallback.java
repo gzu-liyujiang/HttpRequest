@@ -20,14 +20,13 @@ import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
 
-import com.github.gzuliyujiang.logger.Logger;
-
 /**
  * 绑定{@link FragmentActivity}及{@link Fragment}生命周期，防止界面销毁后异常
  *
  * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2020/7/14
  */
+@SuppressWarnings("unused")
 public abstract class SafetyHttpCallback extends HttpCallback implements LifecycleEventObserver {
     private Lifecycle.Event lifecycleEvent;
 
@@ -52,11 +51,11 @@ public abstract class SafetyHttpCallback extends HttpCallback implements Lifecyc
             try {
                 onSuccessSafety(result.getBody());
             } catch (Exception e) {
-                Logger.print(e);
+                HttpStrategy.getLogger().printLog(e);
                 try {
                     onErrorSafety(-1, e);
                 } catch (Exception e2) {
-                    Logger.print(e2);
+                    HttpStrategy.getLogger().printLog(e2);
                 }
             }
             return;
@@ -64,7 +63,7 @@ public abstract class SafetyHttpCallback extends HttpCallback implements Lifecyc
         try {
             onErrorSafety(result.getCode(), result.getCause());
         } catch (Exception e) {
-            Logger.print(e);
+            HttpStrategy.getLogger().printLog(e);
         }
     }
 

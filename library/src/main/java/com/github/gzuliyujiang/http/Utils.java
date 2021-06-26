@@ -33,9 +33,9 @@ import okhttp3.OkHttpClient;
  * @since 2020/7/6
  */
 final class Utils {
-    private static final String HTTP_STRATEGY_UA_PART = "LiYuJiang(2021; HttpStrategy/7.0)";
+    private static final String HTTP_STRATEGY_UA_PART = "LiYuJiang(2021; HttpStrategy/7.2)";
 
-    public static OkHttpClient buildOkHttpClient(@Nullable CookieJar cookieJar, @Nullable ILogger logger) {
+    public static OkHttpClient buildOkHttpClient(@Nullable CookieJar cookieJar) {
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
         builder.connectTimeout(5, TimeUnit.SECONDS);
         builder.retryOnConnectionFailure(true);
@@ -43,7 +43,7 @@ final class Utils {
         builder.writeTimeout(8, TimeUnit.SECONDS);
         builder.followRedirects(false);
         builder.followSslRedirects(true);
-        builder.addInterceptor(new LoggingInterceptor(logger));
+        builder.addInterceptor(new LoggingInterceptor());
         try {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, new TrustManager[]{new UnsafeTrustManager()}, new SecureRandom());

@@ -27,11 +27,13 @@ import androidx.lifecycle.LifecycleOwner;
  * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2020/6/23
  */
+@SuppressWarnings("unused")
 public class HttpStrategy implements IHttp, LifecycleEventObserver {
     private static final String MESSAGE = "Please add dependency `runtimeOnly 'com.lzy.net:okgo:xxx'`" +
             " or `runtimeOnly 'com.amitshekhar.android:android-networking:xxx'` in your app/build.gradle";
     private static final HttpStrategy INSTANCE = new HttpStrategy();
     private IHttp strategy;
+    private ILogger logger;
 
     private HttpStrategy() {
         try {
@@ -46,6 +48,23 @@ public class HttpStrategy implements IHttp, LifecycleEventObserver {
         }
     }
 
+    @NonNull
+    public static ILogger getLogger() {
+        if (INSTANCE.logger == null) {
+            INSTANCE.logger = new ILogger() {
+                @Override
+                public void printLog(Object log) {
+
+                }
+            };
+        }
+        return INSTANCE.logger;
+    }
+
+    public static void setLogger(ILogger logger) {
+        INSTANCE.logger = logger;
+    }
+
     public static IHttp getDefault() {
         if (INSTANCE.strategy == null) {
             throw new RuntimeException(MESSAGE);
@@ -58,21 +77,21 @@ public class HttpStrategy implements IHttp, LifecycleEventObserver {
     }
 
     @Override
-    public void setup(@NonNull Application application, @Nullable ILogger logger) {
-        getDefault().setup(application, logger);
+    public void setup(@NonNull Application application) {
+        getDefault().setup(application);
     }
 
     @UiThread
     @Override
-    public void request(@NonNull HttpOption option) {
-        getDefault().request(option);
+    public void request(@NonNull HttpApi api, @Nullable HttpCallback callback) {
+        getDefault().request(api, callback);
     }
 
     @WorkerThread
     @NonNull
     @Override
-    public HttpResult requestSync(@NonNull HttpOption option) {
-        return getDefault().requestSync(option);
+    public HttpResult requestSync(@NonNull HttpApi api) {
+        return getDefault().requestSync(api);
     }
 
     @Override

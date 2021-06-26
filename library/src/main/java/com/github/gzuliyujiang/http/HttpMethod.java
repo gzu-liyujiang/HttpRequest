@@ -22,6 +22,7 @@ import java.lang.annotation.RetentionPolicy;
  * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2021/3/7 1:47
  */
+@SuppressWarnings("unused")
 @Retention(RetentionPolicy.SOURCE)
 public @interface HttpMethod {
     String GET = "GET";

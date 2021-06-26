@@ -18,9 +18,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.github.gzuliyujiang.http.HttpCallback;
-import com.github.gzuliyujiang.http.HttpOption;
 import com.github.gzuliyujiang.http.HttpResult;
 import com.github.gzuliyujiang.http.HttpStrategy;
+import com.github.gzuliyujiang.http.SimpleApi;
 import com.github.gzuliyujiang.logger.Logger;
 
 public class MainActivity extends AppCompatActivity {
@@ -29,12 +29,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        HttpStrategy.getDefault().request(HttpOption.create("http://ip-api.com/json/?lang=zh-CN").callback(new HttpCallback() {
+        HttpStrategy.getDefault().request(new SimpleApi("http://ip-api.com/json/?lang=zh-CN"), new HttpCallback() {
             @Override
             public void onResult(@NonNull HttpResult result) {
                 Logger.print(result);
             }
-        }).build());
+        });
     }
 
 }

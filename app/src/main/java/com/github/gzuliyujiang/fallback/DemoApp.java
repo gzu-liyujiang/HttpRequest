@@ -41,7 +41,8 @@ public class DemoApp extends Application implements ILogger {
     @Override
     public void onCreate() {
         super.onCreate();
-        HttpStrategy.getDefault().setup(this, this);
+        HttpStrategy.setLogger(this);
+        HttpStrategy.getDefault().setup(this);
     }
 
     @Override

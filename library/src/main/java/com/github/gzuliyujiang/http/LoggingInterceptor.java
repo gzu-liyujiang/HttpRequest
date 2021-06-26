@@ -15,8 +15,6 @@ package com.github.gzuliyujiang.http;
 
 import android.text.TextUtils;
 
-import androidx.annotation.Nullable;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,16 +45,8 @@ final class LoggingInterceptor implements Interceptor {
     private static final Charset UTF8 = Charset.forName("UTF-8");
     private final ILogger logger;
 
-    public LoggingInterceptor(@Nullable ILogger logger) {
-        if (logger == null) {
-            logger = new ILogger() {
-                @Override
-                public void printLog(Object log) {
-
-                }
-            };
-        }
-        this.logger = logger;
+    public LoggingInterceptor() {
+        this.logger = HttpStrategy.getLogger();
     }
 
     @Override

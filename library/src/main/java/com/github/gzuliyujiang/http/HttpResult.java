@@ -25,6 +25,7 @@ import java.util.Map;
  * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2021/6/19 10:14
  */
+@SuppressWarnings("unused")
 public class HttpResult implements Serializable {
     private Map<String, List<String>> headers;
     private int code;
