@@ -20,7 +20,6 @@ import android.os.Looper;
 import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
@@ -30,8 +29,6 @@ import com.androidnetworking.BuildConfig;
 import com.androidnetworking.common.ANRequest;
 import com.androidnetworking.common.ANResponse;
 import com.androidnetworking.common.RequestBuilder;
-import com.androidnetworking.error.ANError;
-import com.androidnetworking.interfaces.OkHttpResponseListener;
 import com.franmontiel.persistentcookiejar.ClearableCookieJar;
 import com.franmontiel.persistentcookiejar.PersistentCookieJar;
 import com.franmontiel.persistentcookiejar.cache.SetCookieCache;
@@ -43,7 +40,6 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import okhttp3.Response;
 
@@ -63,46 +59,6 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
         this.context = application;
     }
 
-    @Override
-    public void request(@NonNull RequestApi api, final @Nullable Callback callback) {
-        ANRequest<?> request = buildRequest(api);
-        request.getAsOkHttpResponse(new OkHttpResponseListener() {
-            @Override
-            public void onResponse(Response response) {
-                if (callback == null) {
-                    return;
-                }
-                ResponseResult result = new ResponseResult();
-                try {
-                    result.setCode(response.code());
-                    result.setHeaders(response.headers().toMultimap());
-                    result.setBody(Objects.requireNonNull(response.body()).string());
-                } catch (Exception e) {
-                    result.setCause(e);
-                }
-                callback.onResult(result);
-            }
-
-            @Override
-            public void onError(ANError anError) {
-                if (callback == null) {
-                    return;
-                }
-                ResponseResult result = new ResponseResult();
-                try {
-                    result.setCode(anError.getErrorCode());
-                    Response response = anError.getResponse();
-                    result.setHeaders(response.headers().toMultimap());
-                    result.setBody(Objects.requireNonNull(response.body()).string());
-                    result.setCause(anError.getCause());
-                } catch (Exception e) {
-                    result.setCause(e);
-                }
-                callback.onResult(result);
-            }
-        });
-    }
-
     @NonNull
     @Override
     public ResponseResult requestSync(@NonNull RequestApi api) {
@@ -114,7 +70,7 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
             result.setHeaders(okHttpResponse.headers().toMultimap());
             result.setCode(okHttpResponse.code());
             if (okHttpResponse.isSuccessful()) {
-                result.setBody(Objects.requireNonNull(okHttpResponse.body()).string());
+                result.setBody(okHttpResponse.body().bytes());
             } else {
                 result.setCause(HttpException.COMMON("服务器响应异常：" + okHttpResponse.code()));
             }
@@ -132,6 +88,7 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
         final LifecycleOwner lifecycleOwner = api.getLifecycleOwner();
         if (lifecycleOwner != null) {
             new Handler(Looper.getMainLooper()).post(new Runnable() {
+                @Override
                 public void run() {
                     lifecycleOwner.getLifecycle().addObserver(FastNetworkingImpl.this);
                 }
@@ -140,7 +97,7 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
         ANRequest<?> request;
         if (MethodType.GET.equals(api.methodType())) {
             ANRequest.GetRequestBuilder<?> getRequestBuilder = AndroidNetworking.get(api.url());
-            getRequestBuilder.setTag(api.getRequestTag());
+            getRequestBuilder.setTag(lifecycleOwner);
             setHeaderAndQueryParameters(getRequestBuilder, api);
             request = getRequestBuilder.build();
         } else {
@@ -149,7 +106,7 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
             int size = files == null ? 0 : files.size();
             if (size > 0) {
                 ANRequest.MultiPartBuilder<?> multiPartBuilder = AndroidNetworking.upload(api.url());
-                multiPartBuilder.setTag(api.getRequestTag());
+                multiPartBuilder.setTag(lifecycleOwner);
                 if (size == 1) {
                     multiPartBuilder.addMultipartFile("file", files.get(0));
                 } else {
@@ -160,7 +117,7 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
                 request = multiPartBuilder.build();
             } else {
                 ANRequest.PostRequestBuilder<?> postRequestBuilder = AndroidNetworking.post(api.url());
-                postRequestBuilder.setTag(api.getRequestTag());
+                postRequestBuilder.setTag(lifecycleOwner);
                 setHeaderAndQueryParameters(postRequestBuilder, api);
                 postRequestBuilder.addBodyParameter(bodyParameters);
                 postRequestBuilder.setContentType(api.contentType());
@@ -175,7 +132,6 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
                 request = postRequestBuilder.build();
             }
         }
-
         String ua = Utils.getDefaultUserAgent(context, "FastNetworking/" + BuildConfig.VERSION_NAME);
         String userAgentPart = api.userAgentPart();
         if (!TextUtils.isEmpty(userAgentPart)) {
@@ -201,19 +157,9 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
     }
 
     @Override
-    public void cancel(@NonNull Object tag) {
-        AndroidNetworking.cancel(tag);
-    }
-
-    @Override
-    public void cancelAll() {
-        AndroidNetworking.cancelAll();
-    }
-
-    @Override
     public void onStateChanged(@NonNull LifecycleOwner source, @NonNull Lifecycle.Event event) {
         if (event == Lifecycle.Event.ON_DESTROY) {
-            cancelAll();
+            AndroidNetworking.cancel(source);
             source.getLifecycle().removeObserver(this);
         }
     }

@@ -15,9 +15,8 @@ package com.github.gzuliyujiang.http;
 
 import android.app.Application;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.UiThread;
 import androidx.annotation.WorkerThread;
 
 /**
@@ -41,17 +40,11 @@ import androidx.annotation.WorkerThread;
  */
 public interface IHttpClient {
 
+    @MainThread
     void setup(@NonNull Application application);
-
-    @UiThread
-    void request(@NonNull RequestApi api, @Nullable Callback callback);
 
     @WorkerThread
     @NonNull
     ResponseResult requestSync(@NonNull RequestApi api);
-
-    void cancel(@NonNull Object tag);
-
-    void cancelAll();
 
 }

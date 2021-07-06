@@ -20,7 +20,7 @@ dependencies {
     implementation library.material
     implementation library.Logger
     debugRuntimeOnly library.orhanobut_logger
-    runtimeOnly 'com.lzy.net:okgo:3.0.4'
+    //runtimeOnly 'com.lzy.net:okgo:3.0.4'
     //runtimeOnly 'com.amitshekhar.android:android-networking:1.0.2'
 }
 

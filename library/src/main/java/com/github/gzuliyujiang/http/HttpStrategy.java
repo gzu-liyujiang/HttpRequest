@@ -16,19 +16,14 @@ package com.github.gzuliyujiang.http;
 import android.app.Application;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.UiThread;
 import androidx.annotation.WorkerThread;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleEventObserver;
-import androidx.lifecycle.LifecycleOwner;
 
 /**
  * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2020/6/23
  */
 @SuppressWarnings("unused")
-public class HttpStrategy implements IHttpClient, LifecycleEventObserver {
+public class HttpStrategy implements IHttpClient {
     private static final String MESSAGE = "Please add dependency `runtimeOnly 'com.lzy.net:okgo:xxx'`" +
             " or `runtimeOnly 'com.amitshekhar.android:android-networking:xxx'` in your app/build.gradle";
     private static final HttpStrategy INSTANCE = new HttpStrategy();
@@ -39,11 +34,12 @@ public class HttpStrategy implements IHttpClient, LifecycleEventObserver {
         try {
             Class.forName(com.lzy.okgo.OkGo.class.getName());
             strategy = new OkGoImpl();
-        } catch (ClassNotFoundException | NoClassDefFoundError e) {
+        } catch (ClassNotFoundException | NoClassDefFoundError e1) {
             try {
                 Class.forName(com.androidnetworking.AndroidNetworking.class.getName());
                 strategy = new FastNetworkingImpl();
-            } catch (ClassNotFoundException | NoClassDefFoundError ignore) {
+            } catch (ClassNotFoundException | NoClassDefFoundError e2) {
+                strategy = new UrlConnectionImpl();
             }
         }
     }
@@ -81,35 +77,11 @@ public class HttpStrategy implements IHttpClient, LifecycleEventObserver {
         getDefault().setup(application);
     }
 
-    @UiThread
-    @Override
-    public void request(@NonNull RequestApi api, @Nullable Callback callback) {
-        getDefault().request(api, callback);
-    }
-
     @WorkerThread
     @NonNull
     @Override
     public ResponseResult requestSync(@NonNull RequestApi api) {
         return getDefault().requestSync(api);
-    }
-
-    @Override
-    public void cancel(@NonNull Object tag) {
-        getDefault().cancel(tag);
-    }
-
-    @Override
-    public void cancelAll() {
-        getDefault().cancelAll();
-    }
-
-    @Override
-    public void onStateChanged(@NonNull LifecycleOwner source, @NonNull Lifecycle.Event event) {
-        if (event == Lifecycle.Event.ON_DESTROY) {
-            cancelAll();
-            source.getLifecycle().removeObserver(this);
-        }
     }
 
 }

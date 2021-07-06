@@ -29,7 +29,7 @@ import java.util.Map;
 public class ResponseResult implements Serializable {
     private Map<String, List<String>> headers;
     private int code;
-    private String body;
+    private byte[] body;
     private Throwable cause;
 
     public Map<String, List<String>> getHeaders() {
@@ -48,11 +48,11 @@ public class ResponseResult implements Serializable {
         this.code = code;
     }
 
-    public String getBody() {
+    public byte[] getBody() {
         return body;
     }
 
-    public void setBody(String body) {
+    public void setBody(byte[] body) {
         this.body = body;
     }
 
@@ -71,10 +71,10 @@ public class ResponseResult implements Serializable {
     @NonNull
     @Override
     public String toString() {
-        return "HttpResult{" +
+        return "ResponseResult{" +
                 "headers=" + headers +
                 ", code=" + code +
-                ", body='" + body + '\'' +
+                ", body=" + body.length + " bytes" +
                 ", cause=" + cause +
                 '}';
     }

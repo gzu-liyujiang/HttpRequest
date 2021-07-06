@@ -20,18 +20,15 @@ import android.os.Looper;
 import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
 
 import com.lzy.okgo.OkGo;
 import com.lzy.okgo.cache.CacheMode;
-import com.lzy.okgo.callback.StringCallback;
 import com.lzy.okgo.cookie.CookieJarImpl;
 import com.lzy.okgo.cookie.store.SPCookieStore;
 import com.lzy.okgo.exception.HttpException;
-import com.lzy.okgo.model.Response;
 import com.lzy.okgo.request.PostRequest;
 import com.lzy.okgo.request.base.Request;
 import com.lzy.okgo.utils.OkLogger;
@@ -41,7 +38,6 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * 参见 https://github.com/jeasonlzy/okhttp-OkGo
@@ -64,34 +60,6 @@ final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
         okGo.setCacheMode(CacheMode.DEFAULT);
     }
 
-    @Override
-    public void request(@NonNull RequestApi api, final @Nullable Callback callback) {
-        Request<String, ?> request = buildRequest(api);
-        request.execute(new StringCallback() {
-            @Override
-            public void onSuccess(Response<String> response) {
-                if (callback == null) {
-                    return;
-                }
-                ResponseResult result = new ResponseResult();
-                try {
-                    result.setCode(response.code());
-                    result.setBody(response.body());
-                    result.setHeaders(response.headers().toMultimap());
-                    result.setCause(response.getException());
-                } catch (Exception e) {
-                    result.setCause(e);
-                }
-                callback.onResult(result);
-            }
-
-            @Override
-            public void onError(Response<String> response) {
-                onSuccess(response);
-            }
-        });
-    }
-
     @NonNull
     @Override
     public ResponseResult requestSync(@NonNull RequestApi api) {
@@ -102,7 +70,7 @@ final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
             result.setHeaders(okHttpResponse.headers().toMultimap());
             result.setCode(okHttpResponse.code());
             if (okHttpResponse.isSuccessful()) {
-                result.setBody(Objects.requireNonNull(okHttpResponse.body()).string());
+                result.setBody(okHttpResponse.body().bytes());
             } else {
                 result.setCause(HttpException.COMMON("服务器响应异常：" + okHttpResponse.code()));
             }
@@ -120,6 +88,7 @@ final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
         final LifecycleOwner lifecycleOwner = api.getLifecycleOwner();
         if (lifecycleOwner != null) {
             new Handler(Looper.getMainLooper()).post(new Runnable() {
+                @Override
                 public void run() {
                     lifecycleOwner.getLifecycle().addObserver(OkGoImpl.this);
                 }
@@ -154,7 +123,7 @@ final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
             }
             request = postRequest;
         }
-        request.tag(api.getRequestTag());
+        request.tag(lifecycleOwner);
         Map<String, String> headers = api.headers();
         if (headers != null && headers.size() > 0) {
             for (Map.Entry<String, String> entry : headers.entrySet()) {
@@ -177,19 +146,9 @@ final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
     }
 
     @Override
-    public void cancel(@NonNull Object tag) {
-        OkGo.getInstance().cancelTag(tag);
-    }
-
-    @Override
-    public void cancelAll() {
-        OkGo.getInstance().cancelAll();
-    }
-
-    @Override
     public void onStateChanged(@NonNull LifecycleOwner source, @NonNull Lifecycle.Event event) {
         if (event == Lifecycle.Event.ON_DESTROY) {
-            cancelAll();
+            OkGo.getInstance().cancelTag(source);
             source.getLifecycle().removeObserver(this);
         }
     }
