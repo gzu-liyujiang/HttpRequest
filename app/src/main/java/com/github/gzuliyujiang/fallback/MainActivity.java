@@ -14,14 +14,15 @@ package com.github.gzuliyujiang.fallback;
 
 import android.os.Bundle;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.github.gzuliyujiang.http.Callback;
 import com.github.gzuliyujiang.http.HttpStrategy;
 import com.github.gzuliyujiang.http.ResponseResult;
-import com.github.gzuliyujiang.http.SimpleApi;
+import com.github.gzuliyujiang.http.SimpleStreamApi;
+import com.github.gzuliyujiang.http.SimpleTextApi;
 import com.github.gzuliyujiang.logger.Logger;
+
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -29,10 +30,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        HttpStrategy.getDefault().request(new SimpleApi("http://ip-api.com/json/?lang=zh-CN"), new Callback() {
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
-            public void onResult(@NonNull ResponseResult result) {
-                Logger.print(result);
+            public void run() {
+                ResponseResult text = HttpStrategy.getDefault().requestSync(new SimpleTextApi("http://ip-api.com/json/?lang=zh-CN"));
+                Logger.print(text);
+                ResponseResult image = HttpStrategy.getDefault().requestSync(new SimpleStreamApi("https://gitee.com/static/images/logo-black.svg"));
+                Logger.print(image);
             }
         });
     }

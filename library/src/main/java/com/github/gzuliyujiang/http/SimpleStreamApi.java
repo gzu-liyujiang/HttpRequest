@@ -24,17 +24,17 @@ import java.util.Map;
  * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2021/6/15 20:46
  */
-public class SimpleApi extends RequestApi {
+public class SimpleStreamApi extends RequestApi {
     private final String url;
 
-    public SimpleApi(String url) {
+    public SimpleStreamApi(String url) {
         this.url = url;
     }
 
     @NonNull
     @Override
     public String contentType() {
-        return ContentType.TEXT;
+        return ContentType.STREAM;
     }
 
     @NonNull

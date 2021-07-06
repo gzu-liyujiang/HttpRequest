@@ -31,7 +31,6 @@ import java.util.Map;
 @SuppressWarnings("unused")
 public abstract class RequestApi implements Serializable {
     private LifecycleOwner lifecycleOwner;
-    private Object requestTag;
 
     public LifecycleOwner getLifecycleOwner() {
         return lifecycleOwner;
@@ -39,14 +38,6 @@ public abstract class RequestApi implements Serializable {
 
     public void setLifecycleOwner(LifecycleOwner lifecycleOwner) {
         this.lifecycleOwner = lifecycleOwner;
-    }
-
-    public Object getRequestTag() {
-        return requestTag;
-    }
-
-    public void setRequestTag(Object requestTag) {
-        this.requestTag = requestTag;
     }
 
     @Nullable
