@@ -99,7 +99,7 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
         if (MethodType.GET.equals(api.methodType())) {
             ANRequest.GetRequestBuilder<?> getRequestBuilder = AndroidNetworking.get(url);
             getRequestBuilder.setTag(lifecycleOwner);
-            setHeaderAndQueryParameters(getRequestBuilder, api);
+            setHeaders(getRequestBuilder, api);
             request = getRequestBuilder.build();
         } else {
             Map<String, String> bodyParameters = api.bodyParameters();
@@ -113,13 +113,13 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
                 } else {
                     multiPartBuilder.addMultipartFileList("file", files);
                 }
-                setHeaderAndQueryParameters(multiPartBuilder, api);
+                setHeaders(multiPartBuilder, api);
                 multiPartBuilder.addMultipartParameter(bodyParameters);
                 request = multiPartBuilder.build();
             } else {
                 ANRequest.PostRequestBuilder<?> postRequestBuilder = AndroidNetworking.post(url);
                 postRequestBuilder.setTag(lifecycleOwner);
-                setHeaderAndQueryParameters(postRequestBuilder, api);
+                setHeaders(postRequestBuilder, api);
                 postRequestBuilder.addBodyParameter(bodyParameters);
                 postRequestBuilder.setContentType(api.contentType());
                 String bodyToString = api.bodyToString();
@@ -142,17 +142,11 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
         return request;
     }
 
-    private void setHeaderAndQueryParameters(RequestBuilder builder, RequestApi api) {
+    private void setHeaders(RequestBuilder builder, RequestApi api) {
         Map<String, String> headers = api.headers();
         if (headers != null && headers.size() > 0) {
             for (Map.Entry<String, String> entry : headers.entrySet()) {
                 builder.addHeaders(entry.getKey(), entry.getValue());
-            }
-        }
-        Map<String, String> queryParameters = api.queryParameters();
-        if (queryParameters != null && queryParameters.size() > 0) {
-            for (Map.Entry<String, String> entry : queryParameters.entrySet()) {
-                builder.addQueryParameter(entry.getKey(), entry.getValue());
             }
         }
     }

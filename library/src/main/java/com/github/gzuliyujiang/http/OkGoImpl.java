@@ -131,12 +131,6 @@ final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
                 request.headers(entry.getKey(), entry.getValue());
             }
         }
-        Map<String, String> queryParameters = api.queryParameters();
-        if (queryParameters != null && queryParameters.size() > 0) {
-            for (Map.Entry<String, String> entry : queryParameters.entrySet()) {
-                request.params(entry.getKey(), entry.getValue());
-            }
-        }
         String ua = Utils.getDefaultUserAgent(context, "OkGo/" + com.lzy.okgo.BuildConfig.VERSION_NAME);
         String userAgentPart = api.userAgentPart();
         if (!TextUtils.isEmpty(userAgentPart)) {
