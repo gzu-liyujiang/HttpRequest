@@ -20,6 +20,7 @@ import android.webkit.WebSettings;
 import androidx.annotation.Nullable;
 
 import java.security.SecureRandom;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
@@ -76,6 +77,27 @@ final class Utils {
             customPart = " " + customPart.trim() + " " + HTTP_STRATEGY_UA_PART;
         }
         return ua + customPart;
+    }
+
+    public static String buildRequestUrl(RequestApi api) {
+        String url = api.url();
+        Map<String, String> queryParameters = api.queryParameters();
+        if (queryParameters != null && queryParameters.size() > 0) {
+            StringBuilder sb = new StringBuilder();
+            for (Map.Entry<String, String> query : queryParameters.entrySet()) {
+                if (query.getKey() == null || query.getValue() == null) {
+                    continue;
+                }
+                sb.append(query.getKey()).append("=").append(query.getValue()).append("&");
+            }
+            sb.deleteCharAt(sb.lastIndexOf("&"));
+            if (url.contains("?")) {
+                url = url + "&" + sb.toString();
+            } else {
+                url = url + "?" + sb.toString();
+            }
+        }
+        return url;
     }
 
 }

@@ -52,7 +52,7 @@ public class UrlConnectionImpl implements IHttpClient {
         ResponseResult result = new ResponseResult();
         HttpURLConnection connection = null;
         try {
-            connection = (HttpURLConnection) new URL(buildRequestUrl(api)).openConnection();
+            connection = (HttpURLConnection) new URL(Utils.buildRequestUrl(api)).openConnection();
             connection.setReadTimeout(TIMEOUT_IN_MILLIONS);
             connection.setConnectTimeout(TIMEOUT_IN_MILLIONS);
             connection.setInstanceFollowRedirects(true);
@@ -103,27 +103,6 @@ public class UrlConnectionImpl implements IHttpClient {
             }
         }
         return result;
-    }
-
-    private String buildRequestUrl(RequestApi api) {
-        String url = api.url();
-        Map<String, String> queryParameters = api.queryParameters();
-        if (queryParameters != null && queryParameters.size() > 0) {
-            StringBuilder sb = new StringBuilder();
-            for (Map.Entry<String, String> query : queryParameters.entrySet()) {
-                if (query.getKey() == null || query.getValue() == null) {
-                    continue;
-                }
-                sb.append(query.getKey()).append("=").append(query.getValue()).append("&");
-            }
-            sb.deleteCharAt(sb.lastIndexOf("&"));
-            if (url.contains("?")) {
-                url = url + "&" + sb.toString();
-            } else {
-                url = url + "?" + sb.toString();
-            }
-        }
-        return url;
     }
 
     private void buildRequestHeaders(HttpURLConnection connection, RequestApi api) {

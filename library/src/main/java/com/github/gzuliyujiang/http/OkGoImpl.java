@@ -94,11 +94,12 @@ final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
                 }
             });
         }
+        String url = Utils.buildRequestUrl(api);
         Request<String, ?> request;
         if (MethodType.GET.equals(api.methodType())) {
-            request = OkGo.get(api.url());
+            request = OkGo.get(url);
         } else {
-            PostRequest<String> postRequest = OkGo.post(api.url());
+            PostRequest<String> postRequest = OkGo.post(url);
             List<File> files = api.files();
             int size = files == null ? 0 : files.size();
             if (size > 0) {

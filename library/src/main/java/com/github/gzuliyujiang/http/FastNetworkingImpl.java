@@ -94,9 +94,10 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
                 }
             });
         }
+        String url = Utils.buildRequestUrl(api);
         ANRequest<?> request;
         if (MethodType.GET.equals(api.methodType())) {
-            ANRequest.GetRequestBuilder<?> getRequestBuilder = AndroidNetworking.get(api.url());
+            ANRequest.GetRequestBuilder<?> getRequestBuilder = AndroidNetworking.get(url);
             getRequestBuilder.setTag(lifecycleOwner);
             setHeaderAndQueryParameters(getRequestBuilder, api);
             request = getRequestBuilder.build();
@@ -105,7 +106,7 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
             List<File> files = api.files();
             int size = files == null ? 0 : files.size();
             if (size > 0) {
-                ANRequest.MultiPartBuilder<?> multiPartBuilder = AndroidNetworking.upload(api.url());
+                ANRequest.MultiPartBuilder<?> multiPartBuilder = AndroidNetworking.upload(url);
                 multiPartBuilder.setTag(lifecycleOwner);
                 if (size == 1) {
                     multiPartBuilder.addMultipartFile("file", files.get(0));
@@ -116,7 +117,7 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
                 multiPartBuilder.addMultipartParameter(bodyParameters);
                 request = multiPartBuilder.build();
             } else {
-                ANRequest.PostRequestBuilder<?> postRequestBuilder = AndroidNetworking.post(api.url());
+                ANRequest.PostRequestBuilder<?> postRequestBuilder = AndroidNetworking.post(url);
                 postRequestBuilder.setTag(lifecycleOwner);
                 setHeaderAndQueryParameters(postRequestBuilder, api);
                 postRequestBuilder.addBodyParameter(bodyParameters);
