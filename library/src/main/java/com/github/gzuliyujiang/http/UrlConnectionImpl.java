@@ -138,29 +138,31 @@ public class UrlConnectionImpl implements IHttpClient {
     private void buildRequestBody(HttpURLConnection connection, RequestApi api) {
         try (OutputStream outputStream = connection.getOutputStream();
              PrintWriter writer = new PrintWriter(outputStream)) {
-            Map<String, String> bodyParameters = api.bodyParameters();
-            if (bodyParameters != null && bodyParameters.size() > 0) {
-                if (api.contentType().equals(ContentType.JSON)) {
-                    writer.print(new JSONObject(bodyParameters).toString());
-                } else {
-                    StringBuilder sb = new StringBuilder();
-                    for (Map.Entry<String, String> body : bodyParameters.entrySet()) {
-                        if (body.getKey() == null || body.getValue() == null) {
-                            continue;
-                        }
-                        sb.append(body.getKey()).append("=").append(body.getValue()).append("&");
-                    }
-                    sb.deleteCharAt(sb.lastIndexOf("&"));
-                    writer.print(sb.toString());
-                }
-            }
             byte[] bytes = api.bodyToBytes();
             if (bytes != null) {
                 outputStream.write(bytes);
-            }
-            String str = api.bodyToString();
-            if (!TextUtils.isEmpty(str)) {
-                writer.print(str);
+            } else {
+                String str = api.bodyToString();
+                if (!TextUtils.isEmpty(str)) {
+                    writer.print(str);
+                } else {
+                    Map<String, String> bodyParameters = api.bodyParameters();
+                    if (bodyParameters != null && bodyParameters.size() > 0) {
+                        if (api.contentType().equals(ContentType.JSON)) {
+                            writer.print(new JSONObject(bodyParameters).toString());
+                        } else {
+                            StringBuilder sb = new StringBuilder();
+                            for (Map.Entry<String, String> body : bodyParameters.entrySet()) {
+                                if (body.getKey() == null || body.getValue() == null) {
+                                    continue;
+                                }
+                                sb.append(body.getKey()).append("=").append(body.getValue()).append("&");
+                            }
+                            sb.deleteCharAt(sb.lastIndexOf("&"));
+                            writer.print(sb.toString());
+                        }
+                    }
+                }
             }
             outputStream.flush();
             writer.flush();

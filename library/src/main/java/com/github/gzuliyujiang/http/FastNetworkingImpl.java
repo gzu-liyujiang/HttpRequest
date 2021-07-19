@@ -29,11 +29,11 @@ import com.androidnetworking.BuildConfig;
 import com.androidnetworking.common.ANRequest;
 import com.androidnetworking.common.ANResponse;
 import com.androidnetworking.common.RequestBuilder;
+import com.androidnetworking.error.ANError;
 import com.franmontiel.persistentcookiejar.ClearableCookieJar;
 import com.franmontiel.persistentcookiejar.PersistentCookieJar;
 import com.franmontiel.persistentcookiejar.cache.SetCookieCache;
 import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor;
-import com.lzy.okgo.exception.HttpException;
 
 import java.io.File;
 import java.net.ConnectException;
@@ -72,12 +72,12 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
             if (okHttpResponse.isSuccessful()) {
                 result.setBody(okHttpResponse.body().bytes());
             } else {
-                result.setCause(HttpException.COMMON("服务器响应异常：" + okHttpResponse.code()));
+                result.setCause(new ANError("服务器响应异常：" + okHttpResponse.code()));
             }
         } catch (SocketTimeoutException e) {
-            result.setCause(HttpException.COMMON("服务器连接超时"));
+            result.setCause(new ANError("服务器连接超时"));
         } catch (ConnectException e) {
-            result.setCause(HttpException.COMMON("服务器连接失败"));
+            result.setCause(new ANError("服务器连接失败"));
         } catch (Exception e) {
             result.setCause(e);
         }
