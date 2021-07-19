@@ -60,9 +60,14 @@ public class UrlConnectionImpl implements IHttpClient {
             buildRequestHeaders(connection, api);
             switch (api.methodType()) {
                 case MethodType.GET:
+                case MethodType.HEAD:
+                case MethodType.OPTIONS:
                     connection.setUseCaches(true);
                     break;
                 case MethodType.POST:
+                case MethodType.PUT:
+                case MethodType.DELETE:
+                case MethodType.PATCH:
                     connection.setUseCaches(false);
                     connection.setDoOutput(true);
                     connection.setDoInput(true);

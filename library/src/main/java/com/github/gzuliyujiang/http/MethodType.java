@@ -26,7 +26,10 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.SOURCE)
 public @interface MethodType {
     String GET = "GET";
+    String HEAD = "HEAD";
+    String OPTIONS = "OPTIONS";
     String POST = "POST";
     String PUT = "PUT";
     String DELETE = "DELETE";
+    String PATCH = "PATCH";
 }

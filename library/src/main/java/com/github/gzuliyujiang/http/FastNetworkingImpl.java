@@ -96,8 +96,17 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
         }
         String url = Utils.buildRequestUrl(api);
         ANRequest<?> request;
-        if (MethodType.GET.equals(api.methodType())) {
-            ANRequest.GetRequestBuilder<?> getRequestBuilder = AndroidNetworking.get(url);
+        if (MethodType.GET.equals(api.methodType()) ||
+                MethodType.HEAD.equals(api.methodType()) ||
+                MethodType.OPTIONS.equals(api.methodType())) {
+            ANRequest.GetRequestBuilder<?> getRequestBuilder;
+            if (MethodType.HEAD.equals(api.methodType())) {
+                getRequestBuilder = AndroidNetworking.head(url);
+            } else if (MethodType.OPTIONS.equals(api.methodType())) {
+                getRequestBuilder = AndroidNetworking.options(url);
+            } else {
+                getRequestBuilder = AndroidNetworking.get(url);
+            }
             getRequestBuilder.setTag(lifecycleOwner);
             setHeaders(getRequestBuilder, api);
             request = getRequestBuilder.build();
@@ -117,7 +126,16 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
                 multiPartBuilder.addMultipartParameter(bodyParameters);
                 request = multiPartBuilder.build();
             } else {
-                ANRequest.PostRequestBuilder<?> postRequestBuilder = AndroidNetworking.post(url);
+                ANRequest.PostRequestBuilder<?> postRequestBuilder;
+                if (MethodType.DELETE.equals(api.methodType())) {
+                    postRequestBuilder = AndroidNetworking.delete(url);
+                } else if (MethodType.PUT.equals(api.methodType())) {
+                    postRequestBuilder = AndroidNetworking.put(url);
+                } else if (MethodType.PATCH.equals(api.methodType())) {
+                    postRequestBuilder = AndroidNetworking.patch(url);
+                } else {
+                    postRequestBuilder = AndroidNetworking.post(url);
+                }
                 postRequestBuilder.setTag(lifecycleOwner);
                 setHeaders(postRequestBuilder, api);
                 postRequestBuilder.addBodyParameter(bodyParameters);

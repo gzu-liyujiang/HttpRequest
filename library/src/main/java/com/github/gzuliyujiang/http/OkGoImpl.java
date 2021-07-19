@@ -29,7 +29,7 @@ import com.lzy.okgo.cache.CacheMode;
 import com.lzy.okgo.cookie.CookieJarImpl;
 import com.lzy.okgo.cookie.store.SPCookieStore;
 import com.lzy.okgo.exception.HttpException;
-import com.lzy.okgo.request.PostRequest;
+import com.lzy.okgo.request.base.BodyRequest;
 import com.lzy.okgo.request.base.Request;
 import com.lzy.okgo.utils.OkLogger;
 
@@ -96,33 +96,50 @@ final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
         }
         String url = Utils.buildRequestUrl(api);
         Request<String, ?> request;
-        if (MethodType.GET.equals(api.methodType())) {
-            request = OkGo.get(url);
+        if (MethodType.GET.equals(api.methodType()) ||
+                MethodType.HEAD.equals(api.methodType()) ||
+                MethodType.OPTIONS.equals(api.methodType())) {
+            if (MethodType.HEAD.equals(api.methodType())) {
+                request = OkGo.head(url);
+            } else if (MethodType.OPTIONS.equals(api.methodType())) {
+                request = OkGo.options(url);
+            } else {
+                request = OkGo.get(url);
+            }
         } else {
-            PostRequest<String> postRequest = OkGo.post(url);
+            BodyRequest<String, ?> bodyRequest;
+            if (MethodType.DELETE.equals(api.methodType())) {
+                bodyRequest = OkGo.delete(url);
+            } else if (MethodType.PUT.equals(api.methodType())) {
+                bodyRequest = OkGo.put(url);
+            } else if (MethodType.PATCH.equals(api.methodType())) {
+                bodyRequest = OkGo.patch(url);
+            } else {
+                bodyRequest = OkGo.post(url);
+            }
             List<File> files = api.files();
             int size = files == null ? 0 : files.size();
             if (size > 0) {
                 if (size == 1) {
-                    postRequest.params("file", files.get(0));
+                    bodyRequest.params("file", files.get(0));
                 } else {
-                    postRequest.addFileParams("file", files);
+                    bodyRequest.addFileParams("file", files);
                 }
             }
-            postRequest.params(api.bodyParameters());
+            bodyRequest.params(api.bodyParameters());
             String bodyToString = api.bodyToString();
             if (bodyToString != null) {
                 if (ContentType.JSON.equals(api.contentType())) {
-                    postRequest.upJson(bodyToString);
+                    bodyRequest.upJson(bodyToString);
                 } else {
-                    postRequest.upString(bodyToString);
+                    bodyRequest.upString(bodyToString);
                 }
             }
             byte[] bodyToBytes = api.bodyToBytes();
             if (bodyToBytes != null) {
-                postRequest.upBytes(bodyToBytes);
+                bodyRequest.upBytes(bodyToBytes);
             }
-            request = postRequest;
+            request = bodyRequest;
         }
         request.tag(lifecycleOwner);
         Map<String, String> headers = api.headers();
