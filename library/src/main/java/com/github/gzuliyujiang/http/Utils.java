@@ -34,7 +34,7 @@ import okhttp3.OkHttpClient;
  * @since 2020/7/6
  */
 final class Utils {
-    public static final String HTTP_STRATEGY_UA_PART = "LiYuJiang(2021; HttpStrategy/7.4)";
+    public static final String HTTP_STRATEGY_UA_PART = "LiYuJiang(2021; HttpStrategy/7.5)";
 
     public static OkHttpClient buildOkHttpClient(@Nullable CookieJar cookieJar) {
         OkHttpClient.Builder builder = new OkHttpClient.Builder();

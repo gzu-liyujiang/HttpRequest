@@ -126,10 +126,13 @@ public class UrlConnectionImpl implements IHttpClient {
                 try {
                     responseLog.append(responseCode).append(' ');
                     responseLog.append(responseMessage).append(' ');
-                    responseLog.append(api.url());
+                    responseLog.append(url);
                     responseLog.append(" (").append(tookMs).append("ms）");
                     for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-                        responseLog.append("\n").append(entry.getKey()).append(": ").append(entry.getValue().get(0));
+                        String key = entry.getKey();
+                        if (key != null) {
+                            responseLog.append("\n").append(key).append(": ").append(entry.getValue().get(0));
+                        }
                     }
                     responseLog.append(" ");
                     String contentType = connection.getContentType().toLowerCase();
@@ -158,7 +161,7 @@ public class UrlConnectionImpl implements IHttpClient {
             } catch (IOException e) {
                 result.setCause(e);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             HttpStrategy.getLogger().printLog(e);
             result.setCause(e);
         } finally {

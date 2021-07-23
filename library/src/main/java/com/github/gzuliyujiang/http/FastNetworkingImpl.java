@@ -38,6 +38,7 @@ import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersisto
 import java.io.File;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 
@@ -69,16 +70,27 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
             if (response.isSuccess()) {
                 Response okHttpResponse = response.getOkHttpResponse();
                 result.setHeaders(okHttpResponse.headers().toMultimap());
-                result.setCode(okHttpResponse.code());
-                result.setBody(okHttpResponse.body().bytes());
+                if (okHttpResponse.isSuccessful()) {
+                    result.setCode(okHttpResponse.code());
+                    result.setBody(okHttpResponse.body().bytes());
+                } else {
+                    throw new ANError("服务器响应异常：" + okHttpResponse.code());
+                }
             } else {
-                result.setCause(response.getError());
+                ANError error = response.getError();
+                result.setCause(error);
+                Throwable throwable = error.getCause();
+                if (throwable != null) {
+                    throw throwable;
+                }
             }
+        } catch (UnknownHostException e) {
+            result.setCause(new ANError("网络不可用"));
         } catch (SocketTimeoutException e) {
             result.setCause(new ANError("服务器连接超时"));
         } catch (ConnectException e) {
             result.setCause(new ANError("服务器连接失败"));
-        } catch (Exception e) {
+        } catch (Throwable e) {
             result.setCause(e);
         }
         return result;
