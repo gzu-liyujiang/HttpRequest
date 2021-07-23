@@ -48,11 +48,12 @@ public class UrlConnectionImpl implements IHttpClient {
     @NonNull
     @Override
     public ResponseResult requestSync(@NonNull RequestApi api) {
-        HttpStrategy.getLogger().printLog("request: " + api);
         ResponseResult result = new ResponseResult();
         HttpURLConnection connection = null;
         try {
-            connection = (HttpURLConnection) new URL(Utils.buildRequestUrl(api)).openConnection();
+            long startMillis = System.currentTimeMillis();
+            String url = Utils.buildRequestUrl(api);
+            connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setReadTimeout(TIMEOUT_IN_MILLIONS);
             connection.setConnectTimeout(TIMEOUT_IN_MILLIONS);
             connection.setInstanceFollowRedirects(true);
@@ -76,7 +77,33 @@ public class UrlConnectionImpl implements IHttpClient {
                 default:
                     break;
             }
+            StringBuilder requestLog = new StringBuilder();
+            try {
+                requestLog.append(api.methodType()).append(' ');
+                requestLog.append(url).append(' ');
+                requestLog.append("\nContent-Type: ").append(api.contentType());
+                Map<String, List<String>> headers = connection.getRequestProperties();
+                for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+                    String name = entry.getKey();
+                    if (!"Content-Type".equalsIgnoreCase(name)) {
+                        requestLog.append("\n").append(name).append(": ").append(entry.getValue().get(0));
+                    }
+                }
+                requestLog.append(" ");
+                byte[] bytes = api.bodyToBytes();
+                if (bytes != null) {
+                    requestLog.append("\nBody: binary data, omitted!");
+                } else {
+                    requestLog.append("\nBody: ").append(buildBodyString(api));
+                }
+            } catch (Exception e) {
+                HttpStrategy.getLogger().printLog(e);
+            } finally {
+                HttpStrategy.getLogger().printLog(requestLog.toString());
+            }
             int responseCode = connection.getResponseCode();
+            String responseMessage = connection.getResponseMessage();
+            long tookMs = System.currentTimeMillis() - startMillis;
             result.setCode(responseCode);
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 throw new IllegalStateException(connection.getResponseMessage());
@@ -94,13 +121,45 @@ public class UrlConnectionImpl implements IHttpClient {
                 outputStream.flush();
                 byte[] data = outputStream.toByteArray();
                 outputStream.close();
-                HttpStrategy.getLogger().printLog("response: " + headers);
                 result.setBody(data);
+                StringBuilder responseLog = new StringBuilder();
+                try {
+                    responseLog.append(responseCode).append(' ');
+                    responseLog.append(responseMessage).append(' ');
+                    responseLog.append(api.url());
+                    responseLog.append(" (").append(tookMs).append("ms）");
+                    for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+                        responseLog.append("\n").append(entry.getKey()).append(": ").append(entry.getValue().get(0));
+                    }
+                    responseLog.append(" ");
+                    String contentType = connection.getContentType().toLowerCase();
+                    if (contentType.contains("text") || contentType.contains("form")
+                            || contentType.contains("json") || contentType.contains("xml")
+                            || contentType.contains("html")) {
+                        String charset = connection.getRequestProperty("Charset");
+                        if (TextUtils.isEmpty(charset)) {
+                            if (contentType.contains("charset=")) {
+                                charset = contentType.split("charset=")[1];
+                            }
+                        }
+                        if (TextUtils.isEmpty(charset)) {
+                            charset = "UTF-8";
+                        }
+                        String body = new String(data, charset);
+                        responseLog.append("\nBody: ").append(body);
+                    } else {
+                        responseLog.append("\nBody: maybe binary body, omitted!");
+                    }
+                } catch (Exception e) {
+                    HttpStrategy.getLogger().printLog(e);
+                } finally {
+                    HttpStrategy.getLogger().printLog(responseLog.toString());
+                }
             } catch (IOException e) {
                 result.setCause(e);
             }
         } catch (Exception e) {
-            HttpStrategy.getLogger().printLog("response: " + e);
+            HttpStrategy.getLogger().printLog(e);
             result.setCause(e);
         } finally {
             if (connection != null) {
@@ -142,33 +201,39 @@ public class UrlConnectionImpl implements IHttpClient {
             if (bytes != null) {
                 outputStream.write(bytes);
             } else {
-                String str = api.bodyToString();
-                if (!TextUtils.isEmpty(str)) {
-                    writer.print(str);
-                } else {
-                    Map<String, String> bodyParameters = api.bodyParameters();
-                    if (bodyParameters != null && bodyParameters.size() > 0) {
-                        if (api.contentType().equals(ContentType.JSON)) {
-                            writer.print(new JSONObject(bodyParameters).toString());
-                        } else {
-                            StringBuilder sb = new StringBuilder();
-                            for (Map.Entry<String, String> body : bodyParameters.entrySet()) {
-                                if (body.getKey() == null || body.getValue() == null) {
-                                    continue;
-                                }
-                                sb.append(body.getKey()).append("=").append(body.getValue()).append("&");
-                            }
-                            sb.deleteCharAt(sb.lastIndexOf("&"));
-                            writer.print(sb.toString());
-                        }
-                    }
-                }
+                writer.print(buildBodyString(api));
             }
             outputStream.flush();
             writer.flush();
         } catch (Exception e) {
             HttpStrategy.getLogger().printLog(e);
         }
+    }
+
+    private String buildBodyString(RequestApi api) {
+        String str = api.bodyToString();
+        if (TextUtils.isEmpty(str)) {
+            Map<String, String> bodyParameters = api.bodyParameters();
+            if (bodyParameters != null && bodyParameters.size() > 0) {
+                if (api.contentType().equals(ContentType.JSON)) {
+                    str = new JSONObject(bodyParameters).toString();
+                } else {
+                    StringBuilder sb = new StringBuilder();
+                    for (Map.Entry<String, String> body : bodyParameters.entrySet()) {
+                        if (body.getKey() == null || body.getValue() == null) {
+                            continue;
+                        }
+                        sb.append(body.getKey()).append("=").append(body.getValue()).append("&");
+                    }
+                    sb.deleteCharAt(sb.lastIndexOf("&"));
+                    str = sb.toString();
+                }
+            }
+        }
+        if (TextUtils.isEmpty(str)) {
+            str = "";
+        }
+        return str;
     }
 
 }

@@ -72,9 +72,8 @@ public class ResponseResult implements Serializable {
     @Override
     public String toString() {
         return "ResponseResult{" +
-                "headers=" + headers +
-                ", code=" + code +
-                ", body=" + body.length + " bytes" +
+                "code=" + code +
+                ", body=" + (body == null ? 0 : body.length) + " bytes" +
                 ", cause=" + cause +
                 '}';
     }

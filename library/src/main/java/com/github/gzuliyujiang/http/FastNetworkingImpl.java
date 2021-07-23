@@ -66,13 +66,13 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
         try {
             ANRequest<?> request = buildRequest(api);
             ANResponse<?> response = request.executeForOkHttpResponse();
-            Response okHttpResponse = response.getOkHttpResponse();
-            result.setHeaders(okHttpResponse.headers().toMultimap());
-            result.setCode(okHttpResponse.code());
-            if (okHttpResponse.isSuccessful()) {
+            if (response.isSuccess()) {
+                Response okHttpResponse = response.getOkHttpResponse();
+                result.setHeaders(okHttpResponse.headers().toMultimap());
+                result.setCode(okHttpResponse.code());
                 result.setBody(okHttpResponse.body().bytes());
             } else {
-                result.setCause(new ANError("服务器响应异常：" + okHttpResponse.code()));
+                result.setCause(response.getError());
             }
         } catch (SocketTimeoutException e) {
             result.setCause(new ANError("服务器连接超时"));
