@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -60,11 +61,14 @@ public class UrlConnectionImpl implements IHttpClient {
             connection.setConnectTimeout(TIMEOUT_IN_MILLIONS);
             connection.setInstanceFollowRedirects(true);
             connection.setRequestMethod(api.methodType());
+            boolean hasBody = false;
             switch (api.methodType()) {
                 case MethodType.GET:
                 case MethodType.HEAD:
                 case MethodType.OPTIONS:
                     connection.setUseCaches(true);
+                    connection.setDoOutput(false);
+                    connection.setDoInput(true);
                     break;
                 case MethodType.POST:
                 case MethodType.PUT:
@@ -73,34 +77,44 @@ public class UrlConnectionImpl implements IHttpClient {
                     connection.setUseCaches(false);
                     connection.setDoOutput(true);
                     connection.setDoInput(true);
+                    hasBody = true;
                     break;
                 default:
                     break;
             }
-            buildRequestHeadersAndBody(connection, api);
+            buildRequestHeadersAndBody(connection, api, hasBody);
             StringBuilder requestLog = new StringBuilder();
             try {
-                requestLog.append(api.methodType()).append(' ');
-                requestLog.append(url).append(' ');
-                requestLog.append("\nContent-Type: ").append(api.contentType());
-                Map<String, List<String>> requestHeaders = connection.getRequestProperties();
-                for (Map.Entry<String, List<String>> entry : requestHeaders.entrySet()) {
-                    String name = entry.getKey();
-                    if (!"Content-Type".equalsIgnoreCase(name)) {
-                        requestLog.append("\n").append(name).append(": ").append(entry.getValue().get(0));
+                requestLog.append(api.methodType()).append(" ");
+                requestLog.append(url).append("\n");
+                requestLog.append("Content-Type: ").append(api.contentType()).append("\n");
+                try {
+                    Map<String, List<String>> requestHeaders = connection.getRequestProperties();
+                    for (Map.Entry<String, List<String>> entry : requestHeaders.entrySet()) {
+                        String name = entry.getKey();
+                        if (!"Content-Type".equalsIgnoreCase(name)) {
+                            requestLog.append(name).append(": ").append(entry.getValue().get(0)).append("\n");
+                        }
                     }
+                } catch (Exception e) {
+                    HttpStrategy.getLogger().printLog(e);
                 }
-                requestLog.append(" ");
                 byte[] bytes = api.bodyToBytes();
                 if (bytes != null) {
-                    requestLog.append("\nBody: binary data, omitted!");
+                    requestLog.append("Body: binary data, omitted!").append("\n");
                 } else {
-                    requestLog.append("\nBody: ").append(buildBodyString(api));
+                    requestLog.append("Body: ").append(buildBodyString(api)).append("\n");
                 }
             } catch (Exception e) {
                 HttpStrategy.getLogger().printLog(e);
             } finally {
                 HttpStrategy.getLogger().printLog(requestLog.toString());
+            }
+            InputStream inputStream;
+            try {
+                inputStream = connection.getInputStream();
+            } catch (IOException e) {
+                inputStream = connection.getErrorStream();
             }
             int responseCode = connection.getResponseCode();
             String responseMessage = connection.getResponseMessage();
@@ -111,8 +125,7 @@ public class UrlConnectionImpl implements IHttpClient {
             }
             Map<String, List<String>> responseHeaders = connection.getHeaderFields();
             result.setHeaders(responseHeaders);
-            try (InputStream inputStream = connection.getInputStream();
-                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
                 int contentLength = connection.getContentLength();
                 int len;
                 byte[] buf = new byte[contentLength > 0 ? contentLength : 2048];
@@ -121,7 +134,6 @@ public class UrlConnectionImpl implements IHttpClient {
                 }
                 outputStream.flush();
                 byte[] data = outputStream.toByteArray();
-                outputStream.close();
                 result.setBody(data);
                 StringBuilder responseLog = new StringBuilder();
                 try {
@@ -129,13 +141,18 @@ public class UrlConnectionImpl implements IHttpClient {
                     responseLog.append(responseMessage).append(' ');
                     responseLog.append(url);
                     responseLog.append(" (").append(tookMs).append("ms）");
+                    // See RFC 2616
+                    String statusLine = connection.getHeaderField(0);
+                    if (statusLine != null) {
+                        responseLog.append(" ").append(statusLine.split(" ")[0]);
+                    }
+                    responseLog.append("\n");
                     for (Map.Entry<String, List<String>> entry : responseHeaders.entrySet()) {
                         String key = entry.getKey();
                         if (key != null) {
-                            responseLog.append("\n").append(key).append(": ").append(entry.getValue().get(0));
+                            responseLog.append(key).append(": ").append(entry.getValue().get(0)).append("\n");
                         }
                     }
-                    responseLog.append(" ");
                     String contentType = connection.getContentType().toLowerCase();
                     if (contentType.contains("text") || contentType.contains("form")
                             || contentType.contains("json") || contentType.contains("xml")
@@ -150,9 +167,9 @@ public class UrlConnectionImpl implements IHttpClient {
                             charset = "UTF-8";
                         }
                         String body = new String(data, charset);
-                        responseLog.append("\nBody: ").append(body);
+                        responseLog.append("Body: ").append(body).append("\n");
                     } else {
-                        responseLog.append("\nBody: maybe binary body, omitted!");
+                        responseLog.append("Body: maybe binary body, omitted!").append("\n");
                     }
                 } catch (Exception e) {
                     HttpStrategy.getLogger().printLog(e);
@@ -161,6 +178,12 @@ public class UrlConnectionImpl implements IHttpClient {
                 }
             } catch (IOException e) {
                 result.setCause(e);
+            } finally {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    HttpStrategy.getLogger().printLog(e);
+                }
             }
         } catch (Throwable e) {
             HttpStrategy.getLogger().printLog(e);
@@ -173,7 +196,7 @@ public class UrlConnectionImpl implements IHttpClient {
         return result;
     }
 
-    private void buildRequestHeadersAndBody(HttpURLConnection connection, RequestApi api) {
+    private void buildRequestHeadersAndBody(URLConnection connection, RequestApi api, boolean hasBody) {
         String end = "\r\n";
         String twoHyphens = "--";
         String boundary = UUID.randomUUID().toString();
@@ -181,7 +204,7 @@ public class UrlConnectionImpl implements IHttpClient {
         connection.setRequestProperty("Connection", "Keep-Alive");
         List<File> files = api.files();
         if (files != null && files.size() > 0) {
-            connection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
         } else {
             connection.setRequestProperty("Content-Type", api.contentType());
         }
@@ -204,6 +227,9 @@ public class UrlConnectionImpl implements IHttpClient {
             String value = header.getValue().trim();
             connection.setRequestProperty(key, value);
         }
+        if (!hasBody) {
+            return;
+        }
         try (DataOutputStream dos = new DataOutputStream(connection.getOutputStream())) {
             if (files == null) {
                 byte[] bytes = api.bodyToBytes();
@@ -218,8 +244,18 @@ public class UrlConnectionImpl implements IHttpClient {
             for (int i = 0; i < fileSize; i++) {
                 File file = files.get(i);
                 dos.writeBytes(twoHyphens + boundary + end);
-                dos.writeBytes("Content-Disposition: form-data; " + "name=\"file" + i + " \";filename=\"" + file.getName() + "\"" + end);
-                dos.writeBytes(end);
+                String fileName = file.getName().toLowerCase();
+                dos.writeBytes("Content-Disposition: form-data; " + "name=\"file\"; filename=\"" + fileName + "\"" + end);
+                String mimeType = "application/octet-stream";
+                if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")
+                        || fileName.endsWith(".png") || fileName.endsWith(".gif")
+                        || fileName.endsWith(".webp")) {
+                    mimeType = "image/*";
+                } else if (fileName.endsWith(".txt") || fileName.endsWith(".json")
+                        || fileName.endsWith(".xml")) {
+                    mimeType = "text/*";
+                }
+                dos.writeBytes("Content-Type: " + mimeType + end);
                 try (FileInputStream fis = new FileInputStream(file)) {
                     byte[] buffer = new byte[1024];
                     int length;
@@ -231,7 +267,7 @@ public class UrlConnectionImpl implements IHttpClient {
                     HttpStrategy.getLogger().printLog(e);
                 }
             }
-            dos.writeBytes(twoHyphens + boundary + twoHyphens + end);
+            dos.writeBytes(twoHyphens + boundary + end);
             dos.flush();
         } catch (Exception e) {
             HttpStrategy.getLogger().printLog(e);
