@@ -25,7 +25,6 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -33,7 +32,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * @author 贵州山野羡民（1032694760@qq.com）
@@ -186,17 +184,13 @@ public class UrlConnectionImpl implements IHttpClient {
     }
 
     private void buildRequestHeadersAndBody(URLConnection connection, RequestApi api, boolean hasBody) {
-        String end = "\r\n";
-        String twoHyphens = "--";
-        String boundary = UUID.randomUUID().toString();
-        connection.setRequestProperty("Accept", "*/*");
-        connection.setRequestProperty("Connection", "Keep-Alive");
         List<File> files = api.files();
         if (files != null && files.size() > 0) {
-            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-        } else {
-            connection.setRequestProperty("Content-Type", api.contentType());
+            throw new UnsupportedOperationException("multipart/form-data not supported");
         }
+        connection.setRequestProperty("Accept", "*/*");
+        connection.setRequestProperty("Connection", "Keep-Alive");
+        connection.setRequestProperty("Content-Type", api.contentType());
         connection.setRequestProperty("Charset", "UTF-8");
         String ua = Utils.getDefaultUserAgent(context, "HttpConnection/1.0");
         String userAgentPart = api.userAgentPart();
@@ -224,34 +218,7 @@ public class UrlConnectionImpl implements IHttpClient {
             if (bytes == null) {
                 bytes = buildBodyString(api).getBytes();
             }
-            if (files == null || files.size() == 0) {
-                dos.write(bytes);
-                dos.flush();
-                return;
-            }
-            for (int i = 0, n = files.size(); i < n; i++) {
-                //根据HTTP协议的multipart/form-data格式进行包装
-                File file = files.get(i);
-                dos.writeBytes(twoHyphens + boundary + end);
-                dos.writeBytes("Content-Disposition: form-data; " + "name=\"file\"; filename=\"" + file.getName() + "\"");
-                dos.writeBytes(end);
-                dos.writeBytes("Content-Type: application/octet-stream");
-                dos.writeBytes(end);
-                dos.writeBytes(end);
-                try (FileInputStream fis = new FileInputStream(file)) {
-                    byte[] buffer = new byte[1024];
-                    int length;
-                    while ((length = fis.read(buffer)) != -1) {
-                        dos.write(buffer, 0, length);
-                    }
-                    dos.writeBytes(end);
-                } catch (Exception e) {
-                    dos.writeBytes("");
-                    dos.writeBytes(end);
-                    HttpStrategy.getLogger().printLog(e);
-                }
-            }
-            dos.writeBytes(twoHyphens + boundary + end);
+            dos.write(bytes);
             dos.flush();
         } catch (Exception e) {
             HttpStrategy.getLogger().printLog(e);
