@@ -23,14 +23,16 @@ import androidx.collection.ArrayMap;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * @author 贵州山野羡民（1032694760@qq.com）
@@ -72,7 +74,6 @@ public class UrlConnectionImpl implements IHttpClient {
                     connection.setUseCaches(false);
                     connection.setDoOutput(true);
                     connection.setDoInput(true);
-                    buildRequestBody(connection, api);
                     break;
                 default:
                     break;
@@ -82,8 +83,8 @@ public class UrlConnectionImpl implements IHttpClient {
                 requestLog.append(api.methodType()).append(' ');
                 requestLog.append(url).append(' ');
                 requestLog.append("\nContent-Type: ").append(api.contentType());
-                Map<String, List<String>> headers = connection.getRequestProperties();
-                for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+                Map<String, List<String>> requestHeaders = connection.getRequestProperties();
+                for (Map.Entry<String, List<String>> entry : requestHeaders.entrySet()) {
                     String name = entry.getKey();
                     if (!"Content-Type".equalsIgnoreCase(name)) {
                         requestLog.append("\n").append(name).append(": ").append(entry.getValue().get(0));
@@ -101,6 +102,7 @@ public class UrlConnectionImpl implements IHttpClient {
             } finally {
                 HttpStrategy.getLogger().printLog(requestLog.toString());
             }
+            buildRequestBody(connection, api);
             int responseCode = connection.getResponseCode();
             String responseMessage = connection.getResponseMessage();
             long tookMs = System.currentTimeMillis() - startMillis;
@@ -108,8 +110,8 @@ public class UrlConnectionImpl implements IHttpClient {
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 throw new IllegalStateException(connection.getResponseMessage());
             }
-            Map<String, List<String>> headers = connection.getHeaderFields();
-            result.setHeaders(headers);
+            Map<String, List<String>> responseHeaders = connection.getHeaderFields();
+            result.setHeaders(responseHeaders);
             try (InputStream inputStream = connection.getInputStream();
                  ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
                 int contentLength = connection.getContentLength();
@@ -128,7 +130,7 @@ public class UrlConnectionImpl implements IHttpClient {
                     responseLog.append(responseMessage).append(' ');
                     responseLog.append(url);
                     responseLog.append(" (").append(tookMs).append("ms）");
-                    for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+                    for (Map.Entry<String, List<String>> entry : responseHeaders.entrySet()) {
                         String key = entry.getKey();
                         if (key != null) {
                             responseLog.append("\n").append(key).append(": ").append(entry.getValue().get(0));
@@ -198,16 +200,40 @@ public class UrlConnectionImpl implements IHttpClient {
     }
 
     private void buildRequestBody(HttpURLConnection connection, RequestApi api) {
-        try (OutputStream outputStream = connection.getOutputStream();
-             PrintWriter writer = new PrintWriter(outputStream)) {
-            byte[] bytes = api.bodyToBytes();
-            if (bytes != null) {
-                outputStream.write(bytes);
-            } else {
-                writer.print(buildBodyString(api));
+        try (DataOutputStream dos = new DataOutputStream(connection.getOutputStream())) {
+            List<File> files = api.files();
+            if (files == null) {
+                byte[] bytes = api.bodyToBytes();
+                if (bytes == null) {
+                    bytes = buildBodyString(api).getBytes();
+                }
+                dos.write(bytes);
+                dos.flush();
+                return;
             }
-            outputStream.flush();
-            writer.flush();
+            String end = "\r\n";
+            String twoHyphens = "--";
+            String boundary = UUID.randomUUID().toString();
+            int fileSize = files.size();
+            connection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+            for (int i = 0; i < fileSize; i++) {
+                File file = files.get(i);
+                dos.writeBytes(twoHyphens + boundary + end);
+                dos.writeBytes("Content-Disposition: form-data; " + "name=\"file" + i + " \";filename=\"" + file.getName() + "\"" + end);
+                dos.writeBytes(end);
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    byte[] buffer = new byte[1024];
+                    int length;
+                    while ((length = fis.read(buffer)) != -1) {
+                        dos.write(buffer, 0, length);
+                    }
+                    dos.writeBytes(end);
+                } catch (Exception e) {
+                    HttpStrategy.getLogger().printLog(e);
+                }
+            }
+            dos.writeBytes(twoHyphens + boundary + twoHyphens + end);
+            dos.flush();
         } catch (Exception e) {
             HttpStrategy.getLogger().printLog(e);
         }

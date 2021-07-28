@@ -23,7 +23,6 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.SOURCE)
 public @interface ContentType {
     String FORM = "application/x-www-form-urlencoded";
-    String MULTIPART = "multipart/form-data";
     String JSON = "application/json;charset=utf-8";
     String TEXT = "text/plain;charset=utf-8";
     String STREAM = "application/octet-stream";
