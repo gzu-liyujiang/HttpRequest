@@ -87,18 +87,7 @@ public class UrlConnectionImpl implements IHttpClient {
             try {
                 requestLog.append(api.methodType()).append(" ");
                 requestLog.append(url).append("\n");
-                requestLog.append("Content-Type: ").append(api.contentType()).append("\n");
-                try {
-                    Map<String, List<String>> requestHeaders = connection.getRequestProperties();
-                    for (Map.Entry<String, List<String>> entry : requestHeaders.entrySet()) {
-                        String name = entry.getKey();
-                        if (!"Content-Type".equalsIgnoreCase(name)) {
-                            requestLog.append(name).append(": ").append(entry.getValue().get(0)).append("\n");
-                        }
-                    }
-                } catch (Exception e) {
-                    HttpStrategy.getLogger().printLog(e);
-                }
+                requestLog.append("Content-Type: ").append(connection.getRequestProperty("Content-Type")).append("\n");
                 byte[] bytes = api.bodyToBytes();
                 if (bytes != null) {
                     requestLog.append("Body: binary data, omitted!").append("\n");
@@ -231,31 +220,28 @@ public class UrlConnectionImpl implements IHttpClient {
             return;
         }
         try (DataOutputStream dos = new DataOutputStream(connection.getOutputStream())) {
+            byte[] bytes = api.bodyToBytes();
+            if (bytes == null) {
+                bytes = buildBodyString(api).getBytes();
+            }
             if (files == null) {
-                byte[] bytes = api.bodyToBytes();
-                if (bytes == null) {
-                    bytes = buildBodyString(api).getBytes();
-                }
                 dos.write(bytes);
                 dos.flush();
                 return;
             }
+            //根据HTTP协议的multipart/form-data格式进行包装
+            dos.writeBytes(twoHyphens + boundary + end);
+            dos.writeBytes("Content-Disposition: form-data; name=\"data\"" + end);
+            dos.writeBytes(end);
+            dos.write(bytes);
+            dos.writeBytes(end);
             int fileSize = files.size();
             for (int i = 0; i < fileSize; i++) {
                 File file = files.get(i);
                 dos.writeBytes(twoHyphens + boundary + end);
-                String fileName = file.getName().toLowerCase();
-                dos.writeBytes("Content-Disposition: form-data; " + "name=\"file\"; filename=\"" + fileName + "\"" + end);
-                String mimeType = "application/octet-stream";
-                if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")
-                        || fileName.endsWith(".png") || fileName.endsWith(".gif")
-                        || fileName.endsWith(".webp")) {
-                    mimeType = "image/*";
-                } else if (fileName.endsWith(".txt") || fileName.endsWith(".json")
-                        || fileName.endsWith(".xml")) {
-                    mimeType = "text/*";
-                }
-                dos.writeBytes("Content-Type: " + mimeType + end);
+                dos.writeBytes("Content-Disposition: form-data; " + "name=\"file\"; filename=\"" + file.getName() + "\"" + end);
+                dos.writeBytes("Content-Type: application/octet-stream" + end);
+                dos.writeBytes(end);
                 try (FileInputStream fis = new FileInputStream(file)) {
                     byte[] buffer = new byte[1024];
                     int length;

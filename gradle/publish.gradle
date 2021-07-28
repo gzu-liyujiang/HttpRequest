@@ -21,7 +21,7 @@ apply plugin: 'maven-publish'
 def includeJar = false
 def includeDoc = false
 def includeSrc = false
-def pomLibGroupName = 'com.github.gzuliyujiang'
+def pomLibGroupName = 'com.github.gzu-liyujiang'
 def pomLibArtifactId = rootProject.name
 def pomLibVersion = getGitLatestTag()
 def pomLibDescription = "TODO description: ${rootProject.name} for Android"
