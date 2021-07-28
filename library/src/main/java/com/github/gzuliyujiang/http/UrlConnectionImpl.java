@@ -60,7 +60,6 @@ public class UrlConnectionImpl implements IHttpClient {
             connection.setConnectTimeout(TIMEOUT_IN_MILLIONS);
             connection.setInstanceFollowRedirects(true);
             connection.setRequestMethod(api.methodType());
-            buildRequestHeaders(connection, api);
             switch (api.methodType()) {
                 case MethodType.GET:
                 case MethodType.HEAD:
@@ -78,6 +77,7 @@ public class UrlConnectionImpl implements IHttpClient {
                 default:
                     break;
             }
+            buildRequestHeadersAndBody(connection, api);
             StringBuilder requestLog = new StringBuilder();
             try {
                 requestLog.append(api.methodType()).append(' ');
@@ -102,7 +102,6 @@ public class UrlConnectionImpl implements IHttpClient {
             } finally {
                 HttpStrategy.getLogger().printLog(requestLog.toString());
             }
-            buildRequestBody(connection, api);
             int responseCode = connection.getResponseCode();
             String responseMessage = connection.getResponseMessage();
             long tookMs = System.currentTimeMillis() - startMillis;
@@ -174,10 +173,18 @@ public class UrlConnectionImpl implements IHttpClient {
         return result;
     }
 
-    private void buildRequestHeaders(HttpURLConnection connection, RequestApi api) {
+    private void buildRequestHeadersAndBody(HttpURLConnection connection, RequestApi api) {
+        String end = "\r\n";
+        String twoHyphens = "--";
+        String boundary = UUID.randomUUID().toString();
         connection.setRequestProperty("Accept", "*/*");
         connection.setRequestProperty("Connection", "Keep-Alive");
-        connection.setRequestProperty("Content-Type", api.contentType());
+        List<File> files = api.files();
+        if (files != null && files.size() > 0) {
+            connection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+        } else {
+            connection.setRequestProperty("Content-Type", api.contentType());
+        }
         connection.setRequestProperty("Charset", "UTF-8");
         String ua = Utils.getDefaultUserAgent(context, "HttpConnection/1.0");
         String userAgentPart = api.userAgentPart();
@@ -197,11 +204,7 @@ public class UrlConnectionImpl implements IHttpClient {
             String value = header.getValue().trim();
             connection.setRequestProperty(key, value);
         }
-    }
-
-    private void buildRequestBody(HttpURLConnection connection, RequestApi api) {
         try (DataOutputStream dos = new DataOutputStream(connection.getOutputStream())) {
-            List<File> files = api.files();
             if (files == null) {
                 byte[] bytes = api.bodyToBytes();
                 if (bytes == null) {
@@ -211,11 +214,7 @@ public class UrlConnectionImpl implements IHttpClient {
                 dos.flush();
                 return;
             }
-            String end = "\r\n";
-            String twoHyphens = "--";
-            String boundary = UUID.randomUUID().toString();
             int fileSize = files.size();
-            connection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
             for (int i = 0; i < fileSize; i++) {
                 File file = files.get(i);
                 dos.writeBytes(twoHyphens + boundary + end);
