@@ -224,23 +224,19 @@ public class UrlConnectionImpl implements IHttpClient {
             if (bytes == null) {
                 bytes = buildBodyString(api).getBytes();
             }
-            if (files == null) {
+            if (files == null || files.size() == 0) {
                 dos.write(bytes);
                 dos.flush();
                 return;
             }
-            //根据HTTP协议的multipart/form-data格式进行包装
-            dos.writeBytes(twoHyphens + boundary + end);
-            dos.writeBytes("Content-Disposition: form-data; name=\"data\"" + end);
-            dos.writeBytes(end);
-            dos.write(bytes);
-            dos.writeBytes(end);
-            int fileSize = files.size();
-            for (int i = 0; i < fileSize; i++) {
+            for (int i = 0, n = files.size(); i < n; i++) {
+                //根据HTTP协议的multipart/form-data格式进行包装
                 File file = files.get(i);
                 dos.writeBytes(twoHyphens + boundary + end);
-                dos.writeBytes("Content-Disposition: form-data; " + "name=\"file\"; filename=\"" + file.getName() + "\"" + end);
-                dos.writeBytes("Content-Type: application/octet-stream" + end);
+                dos.writeBytes("Content-Disposition: form-data; " + "name=\"file\"; filename=\"" + file.getName() + "\"");
+                dos.writeBytes(end);
+                dos.writeBytes("Content-Type: application/octet-stream");
+                dos.writeBytes(end);
                 dos.writeBytes(end);
                 try (FileInputStream fis = new FileInputStream(file)) {
                     byte[] buffer = new byte[1024];
@@ -250,6 +246,8 @@ public class UrlConnectionImpl implements IHttpClient {
                     }
                     dos.writeBytes(end);
                 } catch (Exception e) {
+                    dos.writeBytes("");
+                    dos.writeBytes(end);
                     HttpStrategy.getLogger().printLog(e);
                 }
             }
