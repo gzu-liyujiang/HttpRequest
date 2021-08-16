@@ -129,18 +129,16 @@ final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
                     bodyRequest.addFileParams("file", files);
                 }
             }
-            bodyRequest.params(api.bodyParameters());
-            String bodyToString = api.bodyToString();
-            if (bodyToString != null) {
-                if (ContentType.JSON.equals(api.contentType())) {
-                    bodyRequest.upJson(bodyToString);
-                } else {
-                    bodyRequest.upString(bodyToString);
-                }
-            }
             byte[] bodyToBytes = api.bodyToBytes();
             if (bodyToBytes != null) {
                 bodyRequest.upBytes(bodyToBytes);
+            } else {
+                String body = Utils.buildRequestBody(api);
+                if (ContentType.JSON.equals(api.contentType())) {
+                    bodyRequest.upJson(body);
+                } else {
+                    bodyRequest.upString(body);
+                }
             }
             request = bodyRequest;
         }

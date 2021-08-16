@@ -61,7 +61,6 @@ public abstract class RequestApi implements Serializable {
 
     /**
      * @see MethodType#POST
-     * @see ContentType#MULTIPART
      */
     @Nullable
     public abstract List<File> files();
@@ -75,10 +74,9 @@ public abstract class RequestApi implements Serializable {
     /**
      * @see MethodType#POST
      * @see ContentType#FORM
-     * @see ContentType#MULTIPART
      */
     @Nullable
-    public abstract Map<String, String> bodyParameters();
+    public abstract Map<String, Object> bodyParameters();
 
     /**
      * 注意：使用该方法提交数据会清空实体中其他所有的参数(头信息不清除)

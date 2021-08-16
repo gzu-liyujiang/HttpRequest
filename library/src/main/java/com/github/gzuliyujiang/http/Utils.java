@@ -19,6 +19,8 @@ import android.webkit.WebSettings;
 
 import androidx.annotation.Nullable;
 
+import org.json.JSONObject;
+
 import java.security.SecureRandom;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -98,6 +100,32 @@ final class Utils {
             }
         }
         return url;
+    }
+
+    public static String buildRequestBody(RequestApi api) {
+        String str = api.bodyToString();
+        if (TextUtils.isEmpty(str)) {
+            Map<String, Object> bodyParameters = api.bodyParameters();
+            if (bodyParameters != null && bodyParameters.size() > 0) {
+                if (api.contentType().equals(ContentType.JSON)) {
+                    str = new JSONObject(bodyParameters).toString();
+                } else {
+                    StringBuilder sb = new StringBuilder();
+                    for (Map.Entry<String, Object> body : bodyParameters.entrySet()) {
+                        if (body.getKey() == null || body.getValue() == null) {
+                            continue;
+                        }
+                        sb.append(body.getKey()).append("=").append(body.getValue()).append("&");
+                    }
+                    sb.deleteCharAt(sb.lastIndexOf("&"));
+                    str = sb.toString();
+                }
+            }
+        }
+        if (TextUtils.isEmpty(str)) {
+            str = "";
+        }
+        return str;
     }
 
 }

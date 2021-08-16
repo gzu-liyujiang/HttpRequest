@@ -123,7 +123,7 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
             setHeaders(getRequestBuilder, api);
             request = getRequestBuilder.build();
         } else {
-            Map<String, String> bodyParameters = api.bodyParameters();
+            String body = Utils.buildRequestBody(api);
             List<File> files = api.files();
             int size = files == null ? 0 : files.size();
             if (size > 0) {
@@ -135,7 +135,7 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
                     multiPartBuilder.addMultipartFileList("file", files);
                 }
                 setHeaders(multiPartBuilder, api);
-                multiPartBuilder.addMultipartParameter(bodyParameters);
+                multiPartBuilder.addMultipartParameter(body);
                 request = multiPartBuilder.build();
             } else {
                 ANRequest.PostRequestBuilder<?> postRequestBuilder;
@@ -150,15 +150,12 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
                 }
                 postRequestBuilder.setTag(lifecycleOwner);
                 setHeaders(postRequestBuilder, api);
-                postRequestBuilder.addBodyParameter(bodyParameters);
                 postRequestBuilder.setContentType(api.contentType());
-                String bodyToString = api.bodyToString();
-                if (bodyToString != null) {
-                    postRequestBuilder.addStringBody(bodyToString);
-                }
                 byte[] bodyToBytes = api.bodyToBytes();
                 if (bodyToBytes != null) {
                     postRequestBuilder.addByteBody(bodyToBytes);
+                } else {
+                    postRequestBuilder.addStringBody(body);
                 }
                 request = postRequestBuilder.build();
             }

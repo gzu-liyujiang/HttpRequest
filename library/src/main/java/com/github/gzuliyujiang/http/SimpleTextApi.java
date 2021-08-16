@@ -69,7 +69,7 @@ public class SimpleTextApi extends RequestApi {
 
     @Nullable
     @Override
-    public Map<String, String> bodyParameters() {
+    public Map<String, Object> bodyParameters() {
         return null;
     }
 

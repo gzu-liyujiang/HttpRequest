@@ -20,8 +20,6 @@ import android.text.TextUtils;
 import androidx.annotation.NonNull;
 import androidx.collection.ArrayMap;
 
-import org.json.JSONObject;
-
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -90,7 +88,7 @@ public class UrlConnectionImpl implements IHttpClient {
                 if (bytes != null) {
                     requestLog.append("Body: binary data, omitted!").append("\n");
                 } else {
-                    requestLog.append("Body: ").append(buildBodyString(api)).append("\n");
+                    requestLog.append("Body: ").append(Utils.buildRequestBody(api)).append("\n");
                 }
             } catch (Exception e) {
                 HttpStrategy.getLogger().printLog(e);
@@ -216,39 +214,13 @@ public class UrlConnectionImpl implements IHttpClient {
         try (DataOutputStream dos = new DataOutputStream(connection.getOutputStream())) {
             byte[] bytes = api.bodyToBytes();
             if (bytes == null) {
-                bytes = buildBodyString(api).getBytes();
+                bytes = Utils.buildRequestBody(api).getBytes();
             }
             dos.write(bytes);
             dos.flush();
         } catch (Exception e) {
             HttpStrategy.getLogger().printLog(e);
         }
-    }
-
-    private String buildBodyString(RequestApi api) {
-        String str = api.bodyToString();
-        if (TextUtils.isEmpty(str)) {
-            Map<String, String> bodyParameters = api.bodyParameters();
-            if (bodyParameters != null && bodyParameters.size() > 0) {
-                if (api.contentType().equals(ContentType.JSON)) {
-                    str = new JSONObject(bodyParameters).toString();
-                } else {
-                    StringBuilder sb = new StringBuilder();
-                    for (Map.Entry<String, String> body : bodyParameters.entrySet()) {
-                        if (body.getKey() == null || body.getValue() == null) {
-                            continue;
-                        }
-                        sb.append(body.getKey()).append("=").append(body.getValue()).append("&");
-                    }
-                    sb.deleteCharAt(sb.lastIndexOf("&"));
-                    str = sb.toString();
-                }
-            }
-        }
-        if (TextUtils.isEmpty(str)) {
-            str = "";
-        }
-        return str;
     }
 
 }
