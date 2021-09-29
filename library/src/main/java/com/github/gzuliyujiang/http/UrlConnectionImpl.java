@@ -38,10 +38,17 @@ import java.util.Map;
 public class UrlConnectionImpl implements IHttpClient {
     private static final int TIMEOUT_IN_MILLIONS = 5000;
     private Context context;
+    private boolean allowProxy;
 
     @Override
     public void setup(@NonNull Application application) {
+        setup(application, true);
+    }
+
+    @Override
+    public void setup(@NonNull Application application, boolean allowProxy) {
         this.context = application;
+        this.allowProxy = allowProxy;
     }
 
     @NonNull
@@ -51,6 +58,7 @@ public class UrlConnectionImpl implements IHttpClient {
         HttpURLConnection connection = null;
         try {
             long startMillis = System.currentTimeMillis();
+            Utils.checkHttpProxy(allowProxy);
             String url = Utils.buildRequestUrl(api);
             connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setReadTimeout(TIMEOUT_IN_MILLIONS);
@@ -123,14 +131,9 @@ public class UrlConnectionImpl implements IHttpClient {
                 StringBuilder responseLog = new StringBuilder();
                 try {
                     responseLog.append(responseCode).append(' ');
-                    responseLog.append(responseMessage).append(' ');
                     responseLog.append(url);
                     responseLog.append(" (").append(tookMs).append("ms）");
-                    // See RFC 2616
-                    String statusLine = connection.getHeaderField(0);
-                    if (statusLine != null) {
-                        responseLog.append(" ").append(statusLine.split(" ")[0]);
-                    }
+                    responseLog.append(' ').append(responseMessage);
                     responseLog.append("\n");
                     for (Map.Entry<String, List<String>> entry : responseHeaders.entrySet()) {
                         String key = entry.getKey();
@@ -172,7 +175,7 @@ public class UrlConnectionImpl implements IHttpClient {
             }
         } catch (Throwable e) {
             HttpStrategy.getLogger().printLog(e);
-            result.setCause(e);
+            result.setCause(new RuntimeException(Utils.wrapErrorMessage(e)));
         } finally {
             if (connection != null) {
                 connection.disconnect();

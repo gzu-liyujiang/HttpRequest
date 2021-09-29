@@ -34,9 +34,6 @@ import com.lzy.okgo.request.base.Request;
 import com.lzy.okgo.utils.OkLogger;
 
 import java.io.File;
-import java.net.ConnectException;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 
@@ -48,10 +45,17 @@ import java.util.Map;
  */
 final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
     private Context context;
+    private boolean allowProxy;
 
     @Override
     public void setup(@NonNull Application application) {
-        context = application;
+        setup(application, true);
+    }
+
+    @Override
+    public void setup(@NonNull Application application, boolean allowProxy) {
+        this.context = application;
+        this.allowProxy = allowProxy;
         OkLogger.debug(false);
         // See https://github.com/jeasonlzy/okhttp-OkGo/wiki/Init#%E5%85%A8%E5%B1%80%E9%85%8D%E7%BD%AE
         OkGo okGo = OkGo.getInstance();
@@ -67,6 +71,7 @@ final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
         ResponseResult result = new ResponseResult();
         Request<String, ?> request = buildRequest(api);
         try {
+            Utils.checkHttpProxy(allowProxy);
             okhttp3.Response okHttpResponse = request.execute();
             result.setHeaders(okHttpResponse.headers().toMultimap());
             result.setCode(okHttpResponse.code());
@@ -75,14 +80,8 @@ final class OkGoImpl implements IHttpClient, LifecycleEventObserver {
             } else {
                 result.setCause(HttpException.COMMON("服务器响应异常：" + okHttpResponse.code()));
             }
-        } catch (UnknownHostException e) {
-            result.setCause(HttpException.COMMON("网络不可用"));
-        } catch (SocketTimeoutException e) {
-            result.setCause(HttpException.COMMON("服务器连接超时"));
-        } catch (ConnectException e) {
-            result.setCause(HttpException.COMMON("服务器连接失败"));
         } catch (Throwable e) {
-            result.setCause(e);
+            result.setCause(HttpException.COMMON(Utils.wrapErrorMessage(e)));
         }
         return result;
     }

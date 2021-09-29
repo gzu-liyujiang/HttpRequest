@@ -29,7 +29,7 @@ import com.github.gzuliyujiang.logger.Logger;
 public class DemoApp extends Application implements ILogger {
 
     static {
-        Logger.enableConsolePrinter();
+        Logger.enableConsolePrinter("liyujiang");
     }
 
     @Override
@@ -42,7 +42,7 @@ public class DemoApp extends Application implements ILogger {
     public void onCreate() {
         super.onCreate();
         HttpStrategy.setLogger(this);
-        HttpStrategy.getDefault().setup(this);
+        HttpStrategy.getDefault().setup(this, true);
     }
 
     @Override

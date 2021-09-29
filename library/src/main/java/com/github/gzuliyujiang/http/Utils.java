@@ -21,6 +21,9 @@ import androidx.annotation.Nullable;
 
 import org.json.JSONObject;
 
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.security.SecureRandom;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -126,6 +129,28 @@ final class Utils {
             str = "";
         }
         return str;
+    }
+
+    public static String wrapErrorMessage(Throwable throwable) {
+        if (throwable instanceof UnknownHostException) {
+            return "网络不可用";
+        }
+        if (throwable instanceof SocketTimeoutException) {
+            return "服务器连接超时";
+        }
+        if (throwable instanceof SocketException) {
+            return "服务器连接失败";
+        }
+        return throwable.getMessage();
+    }
+
+    public static void checkHttpProxy(boolean allowProxy) throws IllegalAccessException {
+        String proxyAddress = System.getProperty("http.proxyHost");
+        String proxyPort = System.getProperty("http.proxyPort", "");
+        HttpStrategy.getLogger().printLog("allowProxy=" + allowProxy + ", proxyAddress=" + proxyAddress + ", proxyPort=" + proxyPort);
+        if (!allowProxy && !TextUtils.isEmpty(proxyAddress) && !TextUtils.isEmpty(proxyPort)) {
+            throw new IllegalAccessException("The http request is interrupted, please check the network proxy settings!");
+        }
     }
 
 }
