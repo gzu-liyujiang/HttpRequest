@@ -99,7 +99,7 @@ final class Utils {
                 if (value instanceof Collection) {
                     Collection<?> collection = (Collection<?>) value;
                     for (Object object : collection) {
-                        sb.append(key).append("=").append(object).append("&");
+                        sb.append(key).append("[]").append("=").append(object).append("&");
                     }
                 } else {
                     sb.append(key).append("=").append(value).append("&");
