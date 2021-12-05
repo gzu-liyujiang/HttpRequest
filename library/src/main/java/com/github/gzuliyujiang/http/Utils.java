@@ -22,6 +22,7 @@ import androidx.annotation.Nullable;
 import org.json.JSONObject;
 
 import java.security.SecureRandom;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -83,14 +84,23 @@ final class Utils {
 
     public static String buildRequestUrl(RequestApi api) {
         String url = api.url();
-        Map<String, String> queryParameters = api.queryParameters();
+        Map<String, Object> queryParameters = api.queryParameters();
         if (queryParameters != null && queryParameters.size() > 0) {
             StringBuilder sb = new StringBuilder();
-            for (Map.Entry<String, String> query : queryParameters.entrySet()) {
-                if (query.getKey() == null || query.getValue() == null) {
+            for (Map.Entry<String, Object> query : queryParameters.entrySet()) {
+                String key = query.getKey();
+                Object value = query.getValue();
+                if (key == null || value == null) {
                     continue;
                 }
-                sb.append(query.getKey()).append("=").append(query.getValue()).append("&");
+                if (value instanceof Collection) {
+                    Collection<?> collection = (Collection<?>) value;
+                    for (Object object : collection) {
+                        sb.append(key).append("=").append(object).append("&");
+                    }
+                } else {
+                    sb.append(key).append("=").append(value).append("&");
+                }
             }
             sb.deleteCharAt(sb.lastIndexOf("&"));
             if (url.contains("?")) {

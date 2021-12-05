@@ -69,7 +69,7 @@ public abstract class RequestApi implements Serializable {
      * @see MethodType#GET
      */
     @Nullable
-    public abstract Map<String, String> queryParameters();
+    public abstract Map<String, Object> queryParameters();
 
     /**
      * @see MethodType#POST

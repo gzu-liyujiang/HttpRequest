@@ -63,7 +63,7 @@ public class SimpleTextApi extends RequestApi {
 
     @Nullable
     @Override
-    public Map<String, String> queryParameters() {
+    public Map<String, Object> queryParameters() {
         return null;
     }
 
