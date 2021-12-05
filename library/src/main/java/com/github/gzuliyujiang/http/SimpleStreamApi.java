@@ -23,7 +23,9 @@ import java.util.Map;
 /**
  * @author 贵州山野羡民（1032694760@qq.com）
  * @since 2021/6/15 20:46
+ * @deprecated 用于大文件会OOM，建议用边输入输出流读边存的方式下载
  */
+@Deprecated
 public class SimpleStreamApi extends RequestApi {
     private final String url;
 

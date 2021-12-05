@@ -13,6 +13,7 @@
 package com.github.gzuliyujiang.fallback;
 
 import android.os.Bundle;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -30,14 +31,17 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Executors.newSingleThreadExecutor().execute(new Runnable() {
-            @Override
-            public void run() {
-                ResponseResult text = HttpStrategy.getDefault().requestSync(new SimpleTextApi("http://ip-api.com/json/?lang=zh-CN"));
-                Logger.print(text);
-                ResponseResult image = HttpStrategy.getDefault().requestSync(new SimpleStreamApi("https://gitee.com/static/images/logo-black.svg"));
-                Logger.print(image);
-            }
+        final TextView textView = findViewById(R.id.http_result);
+        Executors.newSingleThreadExecutor().execute(() -> {
+            ResponseResult result = HttpStrategy.getDefault().requestSync(new SimpleTextApi("http://ip-api.com/json/?lang=zh-CN"));
+            Logger.print(result);
+            runOnUiThread(() -> {
+                if (result.isSuccessful()) {
+                    textView.setText(new String(result.getBody()));
+                } else {
+                    textView.setText(result.getCause().toString());
+                }
+            });
         });
     }
 

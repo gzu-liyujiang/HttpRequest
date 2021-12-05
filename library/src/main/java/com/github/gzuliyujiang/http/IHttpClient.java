@@ -15,7 +15,6 @@ package com.github.gzuliyujiang.http;
 
 import android.app.Application;
 
-import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 
@@ -40,8 +39,13 @@ import androidx.annotation.WorkerThread;
  */
 public interface IHttpClient {
 
-    @MainThread
+    /**
+     * 使用 {@link #setup(Application, boolean)} 代替
+     */
+    @Deprecated
     void setup(@NonNull Application application);
+
+    void setup(@NonNull Application application, boolean allowProxy);
 
     @WorkerThread
     @NonNull

@@ -74,7 +74,12 @@ public class HttpStrategy implements IHttpClient {
 
     @Override
     public void setup(@NonNull Application application) {
-        getDefault().setup(application);
+        setup(application, true);
+    }
+
+    @Override
+    public void setup(@NonNull Application application, boolean allowProxy) {
+        getDefault().setup(application, allowProxy);
     }
 
     @WorkerThread

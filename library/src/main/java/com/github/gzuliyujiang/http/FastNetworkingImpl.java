@@ -36,9 +36,6 @@ import com.franmontiel.persistentcookiejar.cache.SetCookieCache;
 import com.franmontiel.persistentcookiejar.persistence.SharedPrefsCookiePersistor;
 
 import java.io.File;
-import java.net.ConnectException;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 
@@ -52,12 +49,19 @@ import okhttp3.Response;
  */
 final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
     private Context context;
+    private boolean allowProxy;
 
     @Override
     public void setup(@NonNull Application application) {
+        setup(application, true);
+    }
+
+    @Override
+    public void setup(@NonNull Application application, boolean allowProxy) {
+        this.context = application;
+        this.allowProxy = allowProxy;
         ClearableCookieJar cookieJar = new PersistentCookieJar(new SetCookieCache(), new SharedPrefsCookiePersistor(application));
         AndroidNetworking.initialize(application, Utils.buildOkHttpClient(cookieJar));
-        this.context = application;
     }
 
     @NonNull
@@ -65,6 +69,7 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
     public ResponseResult requestSync(@NonNull RequestApi api) {
         ResponseResult result = new ResponseResult();
         try {
+            Utils.checkHttpProxy(allowProxy);
             ANRequest<?> request = buildRequest(api);
             ANResponse<?> response = request.executeForOkHttpResponse();
             if (response.isSuccess()) {
@@ -77,21 +82,17 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
                     throw new ANError("服务器响应异常：" + okHttpResponse.code());
                 }
             } else {
-                ANError error = response.getError();
-                result.setCause(error);
-                Throwable throwable = error.getCause();
-                if (throwable != null) {
-                    throw throwable;
-                }
+                throw response.getError();
             }
-        } catch (UnknownHostException e) {
-            result.setCause(new ANError("网络不可用"));
-        } catch (SocketTimeoutException e) {
-            result.setCause(new ANError("服务器连接超时"));
-        } catch (ConnectException e) {
-            result.setCause(new ANError("服务器连接失败"));
         } catch (Throwable e) {
-            result.setCause(e);
+            if (e instanceof ANError) {
+                Throwable cause = e.getCause();
+                if (cause != null) {
+                    result.setCause(new ANError(Utils.wrapErrorMessage(cause)));
+                }
+            } else {
+                result.setCause(new ANError(Utils.wrapErrorMessage(e)));
+            }
         }
         return result;
     }
