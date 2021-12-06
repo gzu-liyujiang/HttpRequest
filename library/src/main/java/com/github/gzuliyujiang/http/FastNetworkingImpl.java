@@ -89,6 +89,8 @@ final class FastNetworkingImpl implements IHttpClient, LifecycleEventObserver {
                 Throwable cause = e.getCause();
                 if (cause != null) {
                     result.setCause(new ANError(Utils.wrapErrorMessage(cause)));
+                } else {
+                    result.setCause(e);
                 }
             } else {
                 result.setCause(new ANError(Utils.wrapErrorMessage(e)));

@@ -65,7 +65,7 @@ public class ResponseResult implements Serializable {
     }
 
     public boolean isSuccessful() {
-        return cause == null;
+        return code >= 200 && code < 300 && cause == null;
     }
 
     @NonNull
